@@ -1,0 +1,1000 @@
+<script setup>
+import { ref, onMounted, computed, watch } from 'vue';
+import { useForm, Link } from '@inertiajs/vue3';
+import { marked } from 'marked';
+
+const vFocus = {
+    mounted: (el) => el.focus()
+};
+
+const props = defineProps({
+    auth: Object,
+    initialMessages: Array,
+    conversations: Array,
+    availableModels: Array,
+    userPreferences: Object,
+});
+
+const messages = ref(props.initialMessages || []);
+const sidebarConversations = ref(props.conversations || []);
+const activeConversationId = ref(null);
+const newMessage = ref('');
+const isTyping = ref(false);
+const showUserDropdown = ref(false);
+const selectedModel = ref(props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b');
+
+// TTS State
+const voices = ref([]);
+const selectedVoice = ref(null);
+const ttsLanguage = ref(props.userPreferences?.tts_language || 'en-US');
+const ttsRate = ref(props.userPreferences?.tts_rate || 1.0);
+const showTtsModal = ref(false);
+const isSpeaking = ref(false);
+const isPaused = ref(false);
+const chatContainer = ref(null);
+const selectedBibleVersion = ref(props.userPreferences?.bible_version || 'WEB');
+
+// TTS Search & Highlighting
+const langSearchQuery = ref('');
+const voiceSearchQuery = ref('');
+const showLangDropdown = ref(false);
+const showVoiceDropdown = ref(false);
+const currentHighlightIndex = ref(-1);
+const currentlySpeakingMessageIndex = ref(-1);
+
+// Auth Modal state
+const showAuthModal = ref(false);
+const authView = ref('signin'); // 'signin' or 'signup'
+const authForm = useForm({
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
+});
+
+// Title Editing State
+const editingTitleId = ref(null);
+const editingTitleValue = ref('');
+
+const sortedSidebarConversations = computed(() => {
+    return [...sidebarConversations.value].sort((a, b) => {
+        return new Date(b.updated_at) - new Date(a.updated_at);
+    });
+});
+
+const filteredVoices = computed(() => {
+    let list = voices.value.filter(v => v.lang.startsWith(ttsLanguage.value.split('-')[0]));
+    if (voiceSearchQuery.value) {
+        list = list.filter(v => v.name.toLowerCase().includes(voiceSearchQuery.value.toLowerCase()));
+    }
+    return list;
+});
+
+const filteredLanguages = computed(() => {
+    const langs = [
+        { code: 'en-US', name: 'English (US)' },
+        { code: 'en-GB', name: 'English (GB)' },
+        { code: 'es-ES', name: 'Spanish' },
+        { code: 'fr-FR', name: 'French' },
+        { code: 'de-DE', name: 'German' },
+        { code: 'it-IT', name: 'Italian' },
+    ];
+    if (!langSearchQuery.value) return langs;
+    return langs.filter(l => l.name.toLowerCase().includes(langSearchQuery.value.toLowerCase()));
+});
+
+watch(ttsLanguage, (newLang) => {
+    if (filteredVoices.value.length > 0) {
+        // Only change if current voice is not in the new language or if strictly requested
+        const currentVoice = voices.value.find(v => v.name === selectedVoice.value);
+        if (!currentVoice || !currentVoice.lang.startsWith(newLang.split('-')[0])) {
+            selectedVoice.value = filteredVoices.value[0].name;
+        }
+    }
+});
+
+const sendMessage = () => {
+    if (newMessage.value.trim() === '') return;
+    
+    // Optimistic UI
+    messages.value.push({
+        role: 'user',
+        content: newMessage.value,
+    });
+    
+    const userMsg = newMessage.value;
+    newMessage.value = '';
+    isTyping.value = true;
+    
+    // Send to backend
+    axios.post(route('chat.send'), {
+        message: userMsg,
+        conversation_id: activeConversationId.value,
+        model: selectedModel.value,
+        bible_version: selectedBibleVersion.value,
+        history: messages.value.slice(-10).map(m => ({ role: m.role, content: m.content })),
+    }).then(response => {
+        isTyping.value = false;
+        const aiMsg = response.data.message;
+        
+        // If not already added by Echo
+        const exists = messages.value.some(m => m.content === aiMsg.content && m.role === 'assistant');
+        if (!exists) {
+            messages.value.push(aiMsg);
+        }
+        
+        // Handle new conversation metadata for auth users
+        if (response.data.conversation_id && !activeConversationId.value) {
+            activeConversationId.value = response.data.conversation_id;
+            
+            // Add to sidebar if not present
+            const sidebarExists = sidebarConversations.value.some(c => c.id === response.data.conversation_id);
+            if (!sidebarExists) {
+                sidebarConversations.value.unshift({
+                    id: response.data.conversation_id,
+                    title: response.data.conversation_title || 'New Conversation',
+                    updated_at: new Date().toISOString()
+                });
+            }
+            
+            // Update URL without reload if possible (Inertia history)
+            window.history.pushState({}, '', route('chat.index') + '?conversation_id=' + response.data.conversation_id);
+        }
+
+        // Update active sidebar timestamp
+        const conv = sidebarConversations.value.find(c => c.id === activeConversationId.value);
+        if (conv) {
+            conv.updated_at = new Date().toISOString();
+        }
+    }).catch(error => {
+        isTyping.value = false;
+        if (error.response?.status === 403) {
+            // Save state for continuation
+            sessionStorage.setItem('pending_chat_message', userMsg);
+            sessionStorage.setItem('pending_chat_history', JSON.stringify(messages.value.slice(0, -1)));
+            showAuthModal.value = true;
+        } else {
+            console.error(error);
+            // Mark last message as failed for retry
+            if (messages.value.length > 0 && messages.value[messages.value.length - 1].role === 'user') {
+                messages.value[messages.value.length - 1].failed = true;
+            }
+        }
+    });
+};
+
+const resendMessage = (content, index) => {
+    // Remove failed flag and re-send
+    messages.value.splice(index, 1);
+    newMessage.value = content;
+    sendMessage();
+};
+
+const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+        // Maybe show toast? Using simplified for now
+    });
+};
+
+const sanitizeForTts = (text) => {
+    // Remove Markdown symbols but keep text
+    return text
+        .replace(/\*\*/g, '') // Bold
+        .replace(/\*/g, '')   // Italic
+        .replace(/__/g, '')   // Bold
+        .replace(/_/g, '')    // Italic
+        .replace(/#/g, '')    // Headers
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Links (keep text)
+        .replace(/`([^`]+)`/g, '$1') // Code
+        .trim();
+};
+
+const readOutLoud = (text, index) => {
+    if (!window.speechSynthesis) return;
+    
+    if (isSpeaking.value && !isPaused.value && currentlySpeakingMessageIndex.value === index) {
+        window.speechSynthesis.pause();
+        isPaused.value = true;
+        return;
+    }
+    
+    if (isPaused.value && currentlySpeakingMessageIndex.value === index) {
+        window.speechSynthesis.resume();
+        isPaused.value = false;
+        return;
+    }
+    
+    window.speechSynthesis.cancel();
+    currentlySpeakingMessageIndex.value = index;
+    currentHighlightIndex.value = -1;
+    
+    const cleanText = sanitizeForTts(text);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    if (selectedVoice.value) {
+        const voice = voices.value.find(v => v.name === selectedVoice.value);
+        if (voice) utterance.voice = voice;
+    }
+    utterance.lang = ttsLanguage.value;
+    utterance.rate = ttsRate.value;
+    
+    utterance.onstart = () => { isSpeaking.value = true; isPaused.value = false; };
+    utterance.onend = () => { 
+        isSpeaking.value = false; 
+        isPaused.value = false; 
+        currentlySpeakingMessageIndex.value = -1;
+        currentHighlightIndex.value = -1;
+    };
+    
+    utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+            currentHighlightIndex.value = event.charIndex;
+        }
+    };
+
+    utterance.onerror = (event) => {
+        console.error('TTS Error:', event);
+        isSpeaking.value = false;
+        isPaused.value = false;
+        currentlySpeakingMessageIndex.value = -1;
+        currentHighlightIndex.value = -1;
+        alert('Samuel encountered a trouble speaking: ' + event.error);
+    };
+    
+    window.speechSynthesis.speak(utterance);
+};
+
+const stopSpeech = () => {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        isSpeaking.value = false;
+        isPaused.value = false;
+        currentlySpeakingMessageIndex.value = -1;
+        currentHighlightIndex.value = -1;
+    }
+};
+
+const getWordsWithOffsets = (text) => {
+    const clean = sanitizeForTts(text);
+    const words = [];
+    const rawWords = clean.split(/\s+/);
+    let currentPos = 0;
+    
+    for (const w of rawWords) {
+        const start = clean.indexOf(w, currentPos);
+        words.push({ word: w, start, end: start + w.length });
+        currentPos = start + w.length;
+    }
+    return words;
+};
+const updateTtsSettings = () => {
+    if (props.auth.user) {
+        axios.post(route('user.tts-settings'), {
+            tts_voice: selectedVoice.value,
+            tts_language: ttsLanguage.value,
+            tts_rate: ttsRate.value,
+        });
+    }
+    showTtsModal.value = false;
+};
+
+const updateBibleVersionPreference = () => {
+    if (props.auth.user) {
+        axios.post(route('user.bible-version'), {
+            bible_version: selectedBibleVersion.value,
+        });
+    }
+};
+
+watch(selectedBibleVersion, () => {
+    updateBibleVersionPreference();
+});
+
+const startNewChat = () => {
+    activeConversationId.value = null;
+    messages.value = [];
+};
+
+const loadConversation = (id) => {
+    activeConversationId.value = id;
+    axios.get(route('chat.show', id)).then(response => {
+        messages.value = response.data.messages;
+    });
+};
+
+const updateConversationTitle = (id) => {
+    if (!editingTitleValue.value.trim()) {
+        editingTitleId.value = null;
+        return;
+    }
+    
+    axios.patch(route('chat.update-title', id), {
+        title: editingTitleValue.value
+    }).then(() => {
+        const conv = sidebarConversations.value.find(c => c.id === id);
+        if (conv) conv.title = editingTitleValue.value;
+        editingTitleId.value = null;
+    });
+};
+
+const scrollToBottom = () => {
+    setTimeout(() => {
+        if (chatContainer.value) {
+            chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+        }
+    }, 100);
+};
+
+watch(messages, () => {
+    scrollToBottom();
+}, { deep: true });
+
+watch(activeConversationId, () => {
+    scrollToBottom();
+});
+
+const startEditingTitle = (conv) => {
+    editingTitleId.value = conv.id;
+    editingTitleValue.value = conv.title;
+};
+
+const parseMarkdown = (content) => {
+    return marked.parse(content, { breaks: true });
+};
+
+const handleLogout = () => {
+    axios.post(route('logout')).then(() => {
+        window.location.href = '/';
+    });
+};
+
+const submitAuth = () => {
+    const url = authView.value === 'signin' ? route('login') : route('register');
+    authForm.post(url, {
+        onSuccess: () => {
+            showAuthModal.value = false;
+            authForm.reset();
+        },
+    });
+};
+
+const closeAuthModal = () => {
+    showAuthModal.value = false;
+    // If they close it, we might want to remove the optimistic user message that triggered it
+    if (messages.value.length > 0 && messages.value[messages.value.length - 1].role === 'user' && !messages.value[messages.value.length - 1].id) {
+        messages.value.pop();
+    }
+};
+
+onMounted(() => {
+    window.Echo.channel('chat')
+        .listen('MessageSent', (e) => {
+            // Update sidebar timestamp if conversation exists
+            if (e.conversation_id) {
+                const conv = sidebarConversations.value.find(c => c.id === e.conversation_id);
+                if (conv) {
+                    conv.updated_at = new Date().toISOString();
+                }
+            }
+
+            // Only push if it's the active conversation
+            if (e.conversation_id === activeConversationId.value) {
+                if (e.message.role === 'assistant') {
+                    messages.value.push(e.message);
+                }
+            } else {
+                // If user is querying but navigating, we can update the sidebar or a hidden state
+                // For now, let's just ensure it doesn't break the active view
+            }
+        });
+
+    // Initialize TTS voices
+    const loadVoices = () => {
+        voices.value = window.speechSynthesis.getVoices();
+        if (props.userPreferences?.tts_voice) {
+            selectedVoice.value = props.userPreferences.tts_voice;
+        } else if (voices.value.length > 0) {
+            // Pick a default voice that matches language if possible
+            const defaultVoice = voices.value.find(v => v.lang.startsWith(ttsLanguage.value.split('-')[0])) || voices.value[0];
+            selectedVoice.value = defaultVoice.name;
+        }
+    };
+    
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // Check for pending history/message to continue
+    const pendingMsg = sessionStorage.getItem('pending_chat_message');
+    const pendingHistory = sessionStorage.getItem('pending_chat_history');
+
+    if (props.auth.user && pendingMsg) {
+        if (pendingHistory) {
+            messages.value = JSON.parse(pendingHistory);
+        }
+        newMessage.value = pendingMsg;
+        sessionStorage.removeItem('pending_chat_message');
+        sessionStorage.removeItem('pending_chat_history');
+        sendMessage();
+    }
+});
+</script>
+
+<template>
+    <div class="flex h-screen bg-stone-50 overflow-hidden">
+        <aside v-if="auth.user" class="hidden md:flex flex-col w-64 bg-stone-100 border-r border-stone-200 shadow-inner">
+            <div class="p-4 border-b border-stone-200 bg-white/50">
+                <button 
+                    class="w-full py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition shadow-sm"
+                    @click="startNewChat"
+                >
+                    + New Conversation
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                <div 
+                    v-for="conv in sortedSidebarConversations" 
+                    :key="conv.id"
+                    :class="['p-3 rounded-lg text-sm cursor-pointer transition flex group flex-col relative', activeConversationId === conv.id ? 'bg-white border border-stone-200 shadow-sm' : 'hover:bg-stone-200 text-stone-600']"
+                    @click="loadConversation(conv.id)"
+                >
+                    <div v-if="editingTitleId === conv.id" class="flex items-center space-x-2 w-full" @click.stop>
+                        <input 
+                            v-model="editingTitleValue" 
+                            type="text" 
+                            class="flex-1 bg-stone-50 border border-stone-200 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                            @keyup.enter="updateConversationTitle(conv.id)"
+                            @blur="updateConversationTitle(conv.id)"
+                            ref="titleInput"
+                            v-focus
+                        >
+                    </div>
+                    <div v-else class="flex justify-between items-start w-full">
+                        <span class="font-medium truncate flex-1">{{ conv.title }}</span>
+                        <button 
+                            v-if="activeConversationId === conv.id"
+                            @click.stop="startEditingTitle(conv)"
+                            class="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-amber-600 transition"
+                        >
+                            <i class="fas fa-pen text-[10px]"></i>
+                        </button>
+                    </div>
+                    <span class="text-[10px] text-stone-400 mt-1">{{ new Date(conv.updated_at).toLocaleDateString() }}</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content (Header + Chat + Input) -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- Header -->
+            <header class="bg-white border-b border-stone-200 p-4 shadow-sm flex justify-between items-center bg-gradient-to-r from-amber-50 to-white">
+            <div class="flex items-center space-x-2">
+                <div class="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center text-white shadow-lg transform hover:rotate-12 transition-transform duration-300">
+                    <i class="fas fa-bible text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-serif font-bold text-stone-800 tracking-tight">Samuel.ai</h1>
+                    <p class="text-sm text-amber-700 italic">"Your faithful brother, Samuel"</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <!-- Agent Selector -->
+                <div v-if="availableModels.length > 0" class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-amber-300 transition-colors h-10 shadow-sm">
+                    <i class="fas fa-robot text-xs text-amber-600"></i>
+                    <select 
+                        v-model="selectedModel" 
+                        class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
+                    >
+                        <option v-for="model in availableModels" :key="model" :value="model">
+                            {{ model }}
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Bible Version Selector -->
+                <div class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-amber-300 transition-colors h-10 shadow-sm">
+                    <i class="fas fa-book-open text-xs text-amber-600"></i>
+                    <select 
+                        v-model="selectedBibleVersion" 
+                        class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
+                    >
+                        <option value="KJV">KJV</option>
+                        <option value="ASV">ASV</option>
+                        <option value="WEB">WEB</option>
+                    </select>
+                </div>
+
+                <!-- Voice Settings Discovery Button -->
+                <button 
+                    @click="showTtsModal = true" 
+                    class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:bg-amber-50 hover:border-amber-300 transition-all group h-10 shadow-sm"
+                    title="Sanctuary Voice Settings"
+                >
+                    <i class="fas fa-volume-up text-xs text-amber-600"></i>
+                    <span class="text-xs font-bold text-stone-600 group-hover:text-amber-700">Voice Settings</span>
+                </button>
+                <div v-if="auth.user" class="relative">
+                    <button 
+                        @click="showUserDropdown = !showUserDropdown"
+                        class="flex items-center space-x-2 p-1 rounded-full hover:bg-stone-100 transition-colors border border-transparent focus:border-amber-200 outline-none"
+                    >
+                        <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 shadow-inner">
+                            <i class="fas fa-user text-sm"></i>
+                        </div>
+                        <i class="fas fa-chevron-down text-[10px] text-stone-400"></i>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div 
+                        v-if="showUserDropdown" 
+                        class="absolute right-0 mt-2 w-48 bg-white border border-stone-100 rounded-xl shadow-xl z-50 py-2 transform origin-top-right overflow-hidden"
+                    >
+                        <div class="px-4 py-2 border-b border-stone-50 mb-1">
+                            <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Logged in as</p>
+                            <p class="text-sm font-medium text-stone-800 truncate">{{ auth.user.name }}</p>
+                        </div>
+                        <Link 
+                            :href="route('profile.edit')" 
+                            class="flex items-center space-x-3 px-4 py-2 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                        >
+                            <i class="fas fa-id-card w-4"></i>
+                            <span>Profile</span>
+                        </Link>
+                        <hr class="border-stone-50 my-1">
+                        <button 
+                            @click="handleLogout"
+                            class="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                            <i class="fas fa-sign-out-alt w-4"></i>
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="flex items-center space-x-2">
+                    <a :href="route('login')" class="flex items-center px-4 h-10 text-sm font-medium text-amber-700 hover:bg-amber-50 rounded-full transition-colors">Login</a>
+                    <a :href="route('register')" class="flex items-center px-5 h-10 bg-amber-600 text-white rounded-full text-sm font-bold hover:bg-amber-700 transition shadow-sm hover:shadow-md">Sign Up</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chat Area -->
+        <main ref="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-6 max-w-4xl mx-auto w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">
+            <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-stone-400 space-y-4">
+                <div class="w-24 h-24 bg-stone-100 rounded-full flex items-center justify-center border-2 border-stone-200 border-dashed">
+                    <i class="fas fa-hand-holding-heart text-4xl text-stone-300"></i>
+                </div>
+                <div class="text-center space-y-2">
+                    <p class="font-serif italic text-2xl text-stone-600">Peace be with you, {{ auth.user ? auth.user.name : 'friend' }}.</p>
+                    <p class="text-sm text-stone-400 max-w-sm">I am Samuel, your brother in faith. How may I encourage you through the Word today?</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 max-w-md w-full mt-4">
+                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-amber-50 hover:border-amber-200 text-left transition shadow-sm group" @click="newMessage = 'Give me comfort in my time of trouble'">
+                        <i class="fas fa-heart text-amber-200 group-hover:text-amber-500 mr-2"></i>
+                        "Give me comfort..."
+                    </button>
+                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-amber-50 hover:border-amber-200 text-left transition shadow-sm group" @click="newMessage = 'What does the bible say about wisdom?'">
+                        <i class="fas fa-lightbulb text-amber-200 group-hover:text-amber-500 mr-2"></i>
+                        "What about wisdom?"
+                    </button>
+                </div>
+            </div>
+
+            <div v-for="(msg, index) in messages" :key="index" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
+                <div :class="['max-w-[85%] rounded-3xl px-6 py-4 shadow-md relative group transition-all duration-300', msg.role === 'user' ? 'bg-amber-600 text-white rounded-tr-none hover:bg-amber-700' : 'bg-white text-stone-800 border border-stone-100 rounded-tl-none hover:border-amber-100']">
+                    <!-- Message Content -->
+                    <div v-if="msg.role === 'assistant'" class="markdown-content text-base leading-relaxed relative">
+                        <div v-html="parseMarkdown(msg.content)"></div>
+                        
+                        <!-- Highlighting Overlay while speaking -->
+                        <div v-if="isSpeaking && currentlySpeakingMessageIndex === index" class="absolute inset-x-0 top-0 bg-white z-10 p-1 rounded-lg border border-amber-100 shadow-sm animate-in fade-in transition-all">
+                             <div class="text-[10px] text-amber-600 font-bold uppercase tracking-widest mb-2 flex justify-between">
+                                <span>Reading Now...</span>
+                                <button @click="stopSpeech" class="hover:text-red-500 transition"><i class="fas fa-times"></i></button>
+                             </div>
+                             <div class="text-base leading-relaxed text-stone-700">
+                                <template v-for="(wordObj, wIdx) in getWordsWithOffsets(msg.content)" :key="wIdx">
+                                    <span 
+                                        :class="['transition-colors duration-150 rounded px-0.5', 
+                                            currentHighlightIndex >= wordObj.start && currentHighlightIndex < wordObj.end ? 'bg-amber-400 text-stone-900 font-bold scale-110' : ''
+                                        ]"
+                                    >
+                                        {{ wordObj.word }}
+                                    </span>
+                                    {{ ' ' }}
+                                </template>
+                             </div>
+                        </div>
+                    </div>
+                    <p v-else :class="['text-lg leading-relaxed font-medium', msg.failed ? 'opacity-70' : '']">{{ msg.content }}</p>
+                    
+                    <!-- Failed Label & Retry -->
+                    <div v-if="msg.failed && msg.role === 'user'" class="mt-3 flex items-center justify-between bg-black/5 p-2 rounded-xl border border-white/10">
+                        <p class="text-[10px] text-red-100 italic flex items-center">
+                            <i class="fas fa-exclamation-circle mr-1 text-[8px]"></i> Delivery failed
+                        </p>
+                        <button 
+                            @click="resendMessage(msg.content, index)" 
+                            class="bg-white text-amber-700 text-[10px] font-bold px-3 py-1 rounded-lg hover:bg-amber-50 transition shadow-sm flex items-center space-x-1"
+                        >
+                            <i class="fas fa-sync-alt text-[8px]"></i>
+                            <span>Retry Now</span>
+                        </button>
+                    </div>
+                    <p v-else-if="msg.failed" class="text-[10px] text-red-400 mt-1 italic flex items-center">
+                        <i class="fas fa-exclamation-circle mr-1 text-[8px]"></i> Delivery failed
+                    </p>
+
+                    <!-- Footnotes -->
+                    <div v-if="msg.citations && msg.citations.length > 0 && msg.role === 'assistant'" class="mt-6">
+                        <hr class="border-stone-100 mb-6">
+                        <div class="flex items-center space-x-2 text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4 px-1">
+                            <i class="fas fa-scroll"></i>
+                            <span>Scripture Footnotes</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div v-for="cite in msg.citations" :key="cite.reference" class="group/cite transition-all">
+                                <div class="flex justify-between items-baseline mb-1">
+                                    <span class="text-xs text-stone-800">
+                                        <b class="font-extrabold text-amber-900">{{ cite.reference }}</b> 
+                                        <span class="text-[10px] text-stone-400 ml-1">({{ cite.version }})</span>
+                                    </span>
+                                    <button @click="readOutLoud(cite.text, -2)" class="text-[10px] text-stone-300 hover:text-amber-600 opacity-0 group-hover/cite:opacity-100 transition">
+                                        <i class="fas fa-volume-up"></i>
+                                    </button>
+                                </div>
+                                <p class="text-sm text-stone-500 leading-relaxed italic border-l-2 border-amber-100 pl-4 py-1">"{{ cite.text }}"</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons Overlay -->
+                    <div :class="['absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1', msg.role === 'user' ? '-left-6' : '-right-10 flex-col space-y-1 items-start top-1']">
+                        <template v-if="msg.role === 'user'">
+                            <button v-if="msg.failed" @click="resendMessage(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-full text-amber-600 hover:text-amber-700 shadow-sm transition transform hover:rotate-45" title="Retry">
+                                <i class="fas fa-sync-alt text-[10px]"></i>
+                            </button>
+                        </template>
+                        <template v-else>
+                            <button @click="copyToClipboard(msg.content)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-amber-600 shadow-sm transition" title="Copy Content">
+                                <i class="fas fa-copy text-[10px]"></i>
+                            </button>
+                            <button @click="readOutLoud(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-amber-600 shadow-sm transition" :title="isSpeaking && !isPaused && currentlySpeakingMessageIndex === index ? 'Pause' : 'Read Out Loud'">
+                                <i :class="['fas text-[10px]', isSpeaking && !isPaused && currentlySpeakingMessageIndex === index ? 'fa-pause' : 'fa-volume-up']"></i>
+                            </button>
+                            <button v-if="isSpeaking && currentlySpeakingMessageIndex === index" @click="stopSpeech" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-red-600 shadow-sm transition" title="Stop">
+                                <i class="fas fa-stop text-[10px]"></i>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            <div v-if="isTyping" class="flex justify-start">
+                <div class="bg-white text-stone-500 border border-stone-100 rounded-3xl rounded-tl-none px-6 py-4 shadow-md flex items-center space-x-3 transition-all animate-pulse">
+                    <i class="fas fa-circle-notch fa-spin text-sm text-amber-600"></i>
+                    <span class="text-sm font-serif italic tracking-wide">Samuel is searching the scriptures for you...</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="bg-white border-t border-stone-200 p-4 shadow-inner">
+            <div class="max-w-4xl mx-auto relative">
+                <input 
+                    v-model="newMessage" 
+                    type="text" 
+                    class="w-full pl-6 pr-14 py-4 bg-stone-50 border border-stone-200 rounded-full focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-base shadow-sm"
+                    placeholder="Ask a biblical question..."
+                    @keyup.enter="sendMessage"
+                >
+                <button 
+                    class="absolute right-2 top-2 p-2 bg-amber-600 text-white rounded-full hover:bg-amber-700 transition-all duration-300 shadow-md disabled:opacity-30 flex items-center justify-center w-12 h-12 transform hover:scale-105"
+                    :disabled="!newMessage.trim() || isTyping"
+                    @click="sendMessage"
+                >
+                    <i v-if="!isTyping" class="fas fa-paper-plane text-lg"></i>
+                    <i v-else class="fas fa-spinner fa-spin text-lg"></i>
+                </button>
+            </div>
+            <div class="mt-2 text-center">
+                <p class="text-[10px] text-stone-400 font-serif">A spiritual companion powered by the light of the word.</p>
+            </div>
+        </footer>
+
+        <!-- TTS Settings Modal -->
+        <div v-if="showTtsModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-stone-100">
+                <div class="bg-amber-600 px-6 py-4 flex justify-between items-center text-white">
+                    <h3 class="text-xl font-serif font-bold italic">Sanctuary Voice Settings</h3>
+                    <button @click="showTtsModal = false" class="hover:bg-white/20 rounded-full p-1 transition">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-5">
+                    <!-- Language Selection -->
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Language</label>
+                        <div 
+                            @click="showLangDropdown = !showLangDropdown"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-amber-300 shadow-sm"
+                        >
+                            <span>{{ filteredLanguages.find(l => l.code === ttsLanguage)?.name || 'Select Language' }}</span>
+                            <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showLangDropdown ? 'rotate-180' : '']"></i>
+                        </div>
+                        
+                        <div v-if="showLangDropdown" class="absolute z-10 w-full mt-2 bg-white border border-stone-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <div class="p-2 border-b border-stone-50">
+                                <input 
+                                    v-model="langSearchQuery" 
+                                    type="text" 
+                                    placeholder="Search languages..."
+                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 outline-none"
+                                >
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <div 
+                                    v-for="lang in filteredLanguages" 
+                                    :key="lang.code"
+                                    @click="ttsLanguage = lang.code; showLangDropdown = false"
+                                    class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
+                                >
+                                    <span>{{ lang.name }}</span>
+                                    <i v-if="ttsLanguage === lang.code" class="fas fa-check text-xs text-amber-600"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reader Selection -->
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Reader (Voice)</label>
+                        <div 
+                            @click="showVoiceDropdown = !showVoiceDropdown"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-amber-300 shadow-sm"
+                        >
+                            <span class="truncate">{{ selectedVoice || 'Select Voice' }}</span>
+                            <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showVoiceDropdown ? 'rotate-180' : '']"></i>
+                        </div>
+                        
+                        <div v-if="showVoiceDropdown" class="absolute z-10 w-full mt-2 bg-white border border-stone-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                            <div class="p-2 border-b border-stone-50">
+                                <input 
+                                    v-model="voiceSearchQuery" 
+                                    type="text" 
+                                    placeholder="Search reader name..."
+                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 outline-none"
+                                >
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <div 
+                                    v-for="v in filteredVoices" 
+                                    :key="v.name"
+                                    @click="selectedVoice = v.name; showVoiceDropdown = false"
+                                    class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
+                                >
+                                    <span class="truncate">{{ v.name }}</span>
+                                    <i v-if="selectedVoice === v.name" class="fas fa-check text-xs text-amber-600"></i>
+                                </div>
+                                <div v-if="filteredVoices.length === 0" class="px-4 py-6 text-center text-xs text-stone-400 italic">
+                                    No readers found for this search.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speed Level -->
+                    <div>
+                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 flex justify-between">
+                            <span>Narration Speed</span>
+                            <span class="text-amber-600 font-mono">{{ ttsRate }}x</span>
+                        </label>
+                        <input 
+                            type="range" 
+                            v-model="ttsRate" 
+                            min="0.5" 
+                            max="2.0" 
+                            step="0.1"
+                            class="w-full accent-amber-600 h-1.5 bg-stone-100 rounded-lg appearance-none cursor-pointer"
+                        >
+                        <div class="flex justify-between text-[10px] text-stone-400 mt-1">
+                            <span>Slow</span>
+                            <span>Normal</span>
+                            <span>Fast</span>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button 
+                            @click="updateTtsSettings" 
+                            class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition shadow-lg transform active:scale-[0.98]"
+                        >
+                            Save Preferences
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-center text-stone-400 italic">"Settings are saved to your profile for future visits"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authentication Modal (Glassmorphism) -->
+    <div v-if="showAuthModal" class="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-white/20 relative">
+            <!-- Close Button -->
+            <button @click="closeAuthModal" class="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition p-2 bg-stone-100/50 rounded-full">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-br from-amber-600 to-amber-700 p-8 text-center text-white relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <i class="fas fa-bible text-[120px] -rotate-12 transform -translate-x-10 translate-y-10"></i>
+                </div>
+                <div class="relative z-10">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-md border border-white/30 shadow-inner">
+                        <i class="fas fa-lock text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-serif font-bold italic tracking-tight">Continue Your Journey</h3>
+                    <p class="text-amber-100 text-sm mt-2 font-serif italic">"Ask, and it shall be given you; seek, and ye shall find" — Matthew 7:7</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-stone-100 bg-stone-50/50">
+                <button 
+                    @click="authView = 'signin'" 
+                    :class="['flex-1 py-4 text-sm font-bold transition-all', authView === 'signin' ? 'text-amber-700 border-b-2 border-amber-600 bg-white' : 'text-stone-400 hover:text-stone-600']"
+                >
+                    Sign In
+                </button>
+                <button 
+                    @click="authView = 'signup'" 
+                    :class="['flex-1 py-4 text-sm font-bold transition-all', authView === 'signup' ? 'text-amber-700 border-b-2 border-amber-600 bg-white' : 'text-stone-400 hover:text-stone-600']"
+                >
+                    Create Account
+                </button>
+            </div>
+
+            <!-- Form -->
+            <div class="p-8 space-y-6">
+                <form @submit.prevent="submitAuth" class="space-y-4">
+                    <div v-if="authView === 'signup'" class="space-y-1">
+                        <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Full Name</label>
+                        <div class="relative group">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors">
+                                <i class="fas fa-user-circle"></i>
+                            </span>
+                            <input 
+                                v-model="authForm.name" 
+                                type="text"
+                                placeholder="Enter your name"
+                                class="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm shadow-inner"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Email Address</label>
+                        <div class="relative group">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            <input 
+                                v-model="authForm.email" 
+                                type="email"
+                                placeholder="you@example.com"
+                                class="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm shadow-inner"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Password</label>
+                        <div class="relative group">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors">
+                                <i class="fas fa-key"></i>
+                            </span>
+                            <input 
+                                v-model="authForm.password" 
+                                type="password"
+                                placeholder="••••••••"
+                                class="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm shadow-inner"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div v-if="authView === 'signup'" class="space-y-1">
+                        <label class="block text-[10px] font-bold text-stone-400 uppercase tracking-widest ml-1">Confirm Password</label>
+                        <div class="relative group">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-stone-300 group-focus-within:text-amber-500 transition-colors">
+                                <i class="fas fa-check-double"></i>
+                            </span>
+                            <input 
+                                v-model="authForm.password_confirmation" 
+                                type="password"
+                                placeholder="••••••••"
+                                class="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-100 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-sm shadow-inner"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div v-if="authForm.errors.email || authForm.errors.password || authForm.errors.name" class="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 animate-shake">
+                        <p v-if="authForm.errors.email">{{ authForm.errors.email }}</p>
+                        <p v-if="authForm.errors.password">{{ authForm.errors.password }}</p>
+                        <p v-if="authForm.errors.name">{{ authForm.errors.name }}</p>
+                    </div>
+
+                    <button 
+                        type="submit"
+                        class="w-full bg-amber-600 text-white py-4 rounded-xl font-bold hover:bg-amber-700 transition shadow-lg transform active:scale-[0.98] mt-2 flex items-center justify-center space-x-2"
+                        :disabled="authForm.processing"
+                    >
+                        <i v-if="authForm.processing" class="fas fa-circle-notch fa-spin"></i>
+                        <span>{{ authView === 'signin' ? 'Sign In' : 'Create Account' }}</span>
+                    </button>
+                </form>
+
+                <div class="relative">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-stone-100"></div></div>
+                    <div class="relative flex justify-center text-[10px] uppercase tracking-widest text-stone-400 font-bold bg-white px-2">Peace be with you</div>
+                </div>
+
+                <p class="text-center text-xs text-stone-500">
+                    {{ authView === 'signin' ? "Don't have an account?" : "Already have an account?" }}
+                    <button @click="authView = authView === 'signin' ? 'signup' : 'signin'" class="text-amber-600 font-bold hover:underline">
+                        {{ authView === 'signin' ? 'Sign Up' : 'Log In' }}
+                    </button>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+</template>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+h1, .font-serif {
+    font-family: 'Crimson Pro', serif;
+}
+
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+.markdown-content p:last-child {
+    margin-bottom: 0;
+}
+.markdown-content ul, .markdown-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+.markdown-content li {
+    margin-bottom: 0.5rem;
+}
+.markdown-content ul {
+    list-style-type: disc;
+}
+.markdown-content ol {
+    list-style-type: decimal;
+}
+.markdown-content strong {
+    font-weight: 600;
+    color: #92400e; /* amber-800 for emphasis */
+}
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+    font-family: 'Crimson Pro', serif;
+    font-weight: 700;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: #78350f; /* amber-900 */
+}
+</style>
