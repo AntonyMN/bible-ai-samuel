@@ -475,7 +475,7 @@ onMounted(() => {
                 </div>
                 <div>
                     <h1 class="text-3xl font-['Gentium_Book_Plus'] font-bold text-stone-800 tracking-tight">Samuel</h1>
-                    <p class="text-sm text-purple-800 italic">"Your faithful brother, Samuel"</p>
+                    <p class="text-sm text-purple-800 italic">"Your faithful brother, Samuel" <span class="text-[9px] not-italic text-stone-300 ml-1">v1.1.2</span></p>
                 </div>
             </div>
             
