@@ -4,20 +4,21 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Samuel.ai') }} - Your Faithful Brother in the Word</title>
-        <meta name="description" content="Samuel.ai is your warm, humble, and encouraging Christian brother, offering scriptural advice and comfort based strictly on the Holy Bible.">
-        <meta name="theme-color" content="#d97706">
+        <title inertia>{{ config('app.name', 'Samuel') }} - Your Faith Companion</title>
+        <meta name="description" content="Samuel is your warm, humble, and encouraging Christian brother, offering scriptural advice and comfort based strictly on the Holy Bible.">
+        <meta name="theme-color" content="#6B21A8">
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
 
         <!-- Scripts -->
         @routes
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased">
+    <body class="font-sans antialiased selection:bg-purple-100 selection:text-purple-900">
         @inertia
     </body>
 </html>
