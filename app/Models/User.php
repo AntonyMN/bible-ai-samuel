@@ -29,6 +29,7 @@ class User extends Authenticatable
         'tts_voice',
         'tts_language',
         'tts_rate',
+        'is_admin',
     ];
 
     /**
@@ -51,6 +52,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 

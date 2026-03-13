@@ -71,15 +71,6 @@ class ChatController extends Controller
         $userMessage = $request->input('message');
         $model = $request->input('model') ?? config('services.ollama.model');
         
-        // Guest limit check
-        if (!Auth::check()) {
-            $count = session()->get('guest_messages_count', 0);
-            if ($count >= 5) {
-                return response()->json(['error' => 'Limit reached. Please login to continue.'], 403);
-            }
-            session()->put('guest_messages_count', $count + 1);
-        }
-
         // 1. Determine Bible Version
         $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
         

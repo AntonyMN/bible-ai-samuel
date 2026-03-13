@@ -13,7 +13,7 @@ $domain = parse_url(config('app.url'), PHP_URL_HOST) ?: 'chatwithsamuel.org';
 Route::domain('chat.' . $domain)->group(function () {
     Route::get('/', [ChatController::class, 'index'])->name('chat.index');
     Route::get('/chat/show/{id}', [ChatController::class, 'show'])->name('chat.show');
-    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
+    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send')->middleware('usage_limit');
 
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -22,6 +22,11 @@ Route::domain('chat.' . $domain)->group(function () {
         Route::post('/user/tts-settings', [ChatController::class, 'updateTtsSettings'])->name('user.tts-settings');
         Route::post('/user/bible-version', [ChatController::class, 'updateBibleVersion'])->name('user.bible-version');
         Route::patch('/conversations/{id}/title', [ChatController::class, 'updateTitle'])->name('chat.update-title');
+    });
+
+    // Admin Routes
+    Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');
     });
 });
 

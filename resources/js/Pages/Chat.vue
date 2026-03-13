@@ -543,6 +543,14 @@ onMounted(() => {
                             <i class="fas fa-id-card w-4"></i>
                             <span>Profile</span>
                         </Link>
+                        <Link 
+                            v-if="auth.user.is_admin"
+                            :href="route('admin.dashboard')" 
+                            class="flex items-center space-x-3 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                            <i class="fas fa-chart-line w-4"></i>
+                            <span>Admin Dashboard</span>
+                        </Link>
                         <hr class="border-stone-50 my-1">
                         <button 
                             @click="handleLogout"
