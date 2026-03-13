@@ -32,7 +32,7 @@ const showTtsModal = ref(false);
 const isSpeaking = ref(false);
 const isPaused = ref(false);
 const chatContainer = ref(null);
-const selectedBibleVersion = ref(props.userPreferences?.bible_version || 'WEB');
+const selectedBibleVersion = ref(props.userPreferences?.bible_version || 'BSB');
 
 // TTS Search & Highlighting
 const langSearchQuery = ref('');
@@ -500,6 +500,7 @@ onMounted(() => {
                         v-model="selectedBibleVersion" 
                         class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
                     >
+                        <option value="BSB">BSB</option>
                         <option value="KJV">KJV</option>
                         <option value="ASV">ASV</option>
                         <option value="WEB">WEB</option>
@@ -626,28 +627,7 @@ onMounted(() => {
                         <i class="fas fa-exclamation-circle mr-1 text-[8px]"></i> Delivery failed
                     </p>
 
-                    <!-- Footnotes -->
-                    <div v-if="msg.citations && msg.citations.length > 0 && msg.role === 'assistant'" class="mt-6">
-                        <hr class="border-stone-100 mb-6">
-                        <div class="flex items-center space-x-2 text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-4 px-1">
-                            <i class="fas fa-scroll"></i>
-                            <span>Scripture Footnotes</span>
-                        </div>
-                        <div class="space-y-4">
-                            <div v-for="cite in msg.citations" :key="cite.reference" class="group/cite transition-all">
-                                <div class="flex justify-between items-baseline mb-1">
-                                    <span class="text-xs text-stone-800">
-                                        <b class="font-extrabold text-amber-900">{{ cite.reference }}</b> 
-                                        <span class="text-[10px] text-stone-400 ml-1">({{ cite.version }})</span>
-                                    </span>
-                                    <button @click="readOutLoud(cite.text, -2)" class="text-[10px] text-stone-300 hover:text-amber-600 opacity-0 group-hover/cite:opacity-100 transition">
-                                        <i class="fas fa-volume-up"></i>
-                                    </button>
-                                </div>
-                                <p class="text-sm text-stone-500 leading-relaxed italic border-l-2 border-amber-100 pl-4 py-1">"{{ cite.text }}"</p>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- New Systematic Footnotes are already part of msg.content -->
 
                     <!-- Action Buttons Overlay -->
                     <div :class="['absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1', msg.role === 'user' ? '-left-6' : '-right-10 flex-col space-y-1 items-start top-1']">

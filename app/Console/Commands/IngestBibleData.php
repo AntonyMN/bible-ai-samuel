@@ -21,10 +21,20 @@ class IngestBibleData extends Command
     protected $description = 'Ingest Bible data from JSON sources into MongoDB and ChromaDB';
 
     protected $sources = [
-        'KJV' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json',
-        'ASV' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_asv.json',
-        'BBE' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_bbe.json',
-        'WEB' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_web.json',
+        'BSB' => 'en-bsb',
+        'KJV' => 'en-kjv',
+        'ASV' => 'en-asv',
+        'WEB' => 'en-web',
+    ];
+
+    protected $books = [
+        'genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy', 'joshua', 'judges', 'ruth', '1samuel', '2samuel',
+        '1kings', '2kings', '1chronicles', '2chronicles', 'ezra', 'nehemiah', 'esther', 'job', 'psalms', 'proverbs',
+        'ecclesiastes', 'songofsolomon', 'isaiah', 'jeremiah', 'lamentations', 'ezekiel', 'daniel', 'hosea', 'joel',
+        'amos', 'obadiah', 'jonah', 'micah', 'nahum', 'habakkuk', 'zephaniah', 'haggai', 'zechariah', 'malachi',
+        'matthew', 'mark', 'luke', 'john', 'acts', 'romans', '1corinthians', '2corinthians', 'galatians', 'ephesians',
+        'philippians', 'colossians', '1thessalonians', '2thessalonians', '1timothy', '2timothy', 'titus', 'philemon',
+        'hebrews', 'james', '1peter', '2peter', '1john', '2john', '3john', 'jude', 'revelation'
     ];
 
     /**
@@ -35,7 +45,7 @@ class IngestBibleData extends Command
         $ollama = app(\App\Services\OllamaService::class);
         $vectorStore = app(\App\Services\VectorStoreService::class);
         
-        $this->info("Handle started");
+        $this->info("Handle started for wldeh/bible-api source");
         $targetVersion = $this->option('bible-version');
         $dryRun = $this->option('dry-run');
 
@@ -44,108 +54,109 @@ class IngestBibleData extends Command
                 $vectorStore->createCollection('bible_verses');
                 $this->info("ChromaDB collection created/verified.");
             } catch (\Exception $e) {
-                $this->warn("ChromaDB connection failed. Vectorization will be skipped: " . $e->getMessage());
+                $this->warn("ChromaDB connection failed. Vectorization may be skipped: " . $e->getMessage());
             }
         }
 
         $versionsToIngest = $targetVersion ? [$targetVersion => $this->sources[$targetVersion]] : $this->sources;
 
-        foreach ($versionsToIngest as $version => $url) {
-            $this->info("Fetching {$version} from {$url}...");
-            try {
-                $response = \Illuminate\Support\Facades\Http::get($url);
-                
-                if (!$response->successful()) {
-                    $this->error("Failed to fetch {$version}. Status: " . $response->status());
-                    continue;
-                }
-            } catch (\Exception $e) {
-                $this->error("HTTP error fetching {$version}: " . $e->getMessage());
-                continue;
-            }
+        foreach ($versionsToIngest as $internalVersion => $apiId) {
+            $this->info("Processing Version: {$internalVersion} (API ID: {$apiId})");
 
-            $this->info("Response received. Length: " . strlen($response->body()));
-            
-            $body = $response->body();
-            // Remove BOM if present
-            $body = preg_replace('/^[\x00-\x1F\x80-\xFF]/', '', $body);
-            // More robust BOM removal
-            $body = ltrim($body, "\xEF\xBB\xBF");
-            
-            $data = json_decode($body, true);
+            foreach ($this->books as $bookSlug) {
+                // We'll iterate chapters until 404
+                $chapter = 1;
+                $hasMoreChapters = true;
 
-            if (is_null($data)) {
-                $this->error("JSON decoding failed for {$version}");
-                continue;
-            }
-
-            foreach ($data as $bookData) {
-                $bookName = $bookData['name'];
-                $this->info("Processing {$version} - {$bookName}");
-
-                $verseGlobalCount = 0;
-                foreach ($bookData['chapters'] as $chapterIndex => $verses) {
-                    $chapterNum = $chapterIndex + 1;
+                while ($hasMoreChapters) {
+                    $chapterUrl = "https://raw.githubusercontent.com/wldeh/bible-api/main/bibles/{$apiId}/books/{$bookSlug}/chapters/{$chapter}.json";
                     
-                    $batchVerses = [];
-                    $batchEmbeddings = [];
-                    $batchMetadatas = [];
-                    $batchIds = [];
-
-                    foreach ($verses as $verseIndex => $text) {
-                        $verseNum = $verseIndex + 1;
-                        $fullReference = "{$bookName} {$chapterNum}:{$verseNum}";
-
-                        if ($dryRun) {
-                            $this->line("Would ingest: [{$version}] {$fullReference}: " . substr($text, 0, 50) . "...");
+                    try {
+                        $response = \Illuminate\Support\Facades\Http::get($chapterUrl);
+                        
+                        if ($response->status() === 404) {
+                            $hasMoreChapters = false;
                             continue;
                         }
 
-                        // Store in MongoDB
-                        \App\Models\Verse::updateOrCreate([
-                            'version' => $version,
-                            'book' => $bookName,
-                            'chapter' => $chapterNum,
-                            'verse' => $verseNum,
-                        ], [
-                            'text' => $text,
-                            'full_reference' => $fullReference,
-                        ]);
-
-                        $verseGlobalCount++;
-                        if ($verseGlobalCount % 100 === 0) {
-                            $this->info("Stored $verseGlobalCount verses...");
+                        if (!$response->successful()) {
+                            $this->error("Failed to fetch {$bookSlug} Ch {$chapter}. Status: " . $response->status());
+                            $hasMoreChapters = false;
+                            continue;
                         }
 
-                        // For demo purposes, we vectorize only KJV or if explicitly selected
-                        if ($version === 'KJV' || $targetVersion) {
-                            try {
-                                $embedding = $ollama->embed("{$fullReference} ({$version}): {$text}");
-                                
-                                if (!empty($embedding)) {
-                                    $batchVerses[] = "{$fullReference} ({$version}): {$text}";
-                                    $batchEmbeddings[] = $embedding;
-                                    $batchMetadatas[] = [
-                                        'version' => $version,
-                                        'book' => $bookName,
-                                        'chapter' => $chapterNum,
-                                        'verse' => $verseNum,
-                                        'reference' => $fullReference,
-                                    ];
-                                    $batchIds[] = "{$version}_{$bookName}_{$chapterNum}_{$verseNum}";
+                        $data = $response->json();
+                        if (!isset($data['data'])) {
+                            $hasMoreChapters = false;
+                            continue;
+                        }
+
+                        $this->info("Ingesting {$internalVersion} - {$bookSlug} Chapter {$chapter}...");
+
+                        $batchVerses = [];
+                        $batchEmbeddings = [];
+                        $batchMetadatas = [];
+                        $batchIds = [];
+
+                        foreach ($data['data'] as $verseData) {
+                            $bookName = $verseData['book'];
+                            $chapterNum = (int)$verseData['chapter'];
+                            $verseNum = (int)$verseData['verse'];
+                            $text = $verseData['text'];
+                            $fullReference = "{$bookName} {$chapterNum}:{$verseNum}";
+
+                            if ($dryRun) {
+                                $this->line("Would ingest: [{$internalVersion}] {$fullReference}: " . substr($text, 0, 50) . "...");
+                                continue;
+                            }
+
+                            // Store in MongoDB
+                            \App\Models\Verse::updateOrCreate([
+                                'version' => $internalVersion,
+                                'book' => $bookName,
+                                'chapter' => $chapterNum,
+                                'verse' => $verseNum,
+                            ], [
+                                'text' => $text,
+                                'full_reference' => $fullReference,
+                            ]);
+
+                            // Vectorization (Primary Version or Explicit)
+                            if ($internalVersion === 'BSB' || $targetVersion) {
+                                try {
+                                    $embedding = $ollama->embed("{$fullReference} ({$internalVersion}): {$text}");
+                                    
+                                    if (!empty($embedding)) {
+                                        $batchVerses[] = "{$fullReference} ({$internalVersion}): {$text}";
+                                        $batchEmbeddings[] = $embedding;
+                                        $batchMetadatas[] = [
+                                            'version' => $internalVersion,
+                                            'book' => $bookName,
+                                            'chapter' => $chapterNum,
+                                            'verse' => $verseNum,
+                                            'reference' => $fullReference,
+                                        ];
+                                        $batchIds[] = "{$internalVersion}_{$bookName}_{$chapterNum}_{$verseNum}";
+                                    }
+                                } catch (\Exception $e) {
+                                    // Skip embedding if ollama/chroma fails
                                 }
-                            } catch (\Exception $e) {
-                                // Skip embedding if ollama/chroma fails
                             }
                         }
-                    }
 
-                    if (!$dryRun && !empty($batchVerses)) {
-                        try {
-                            $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $batchEmbeddings);
-                        } catch (\Exception $e) {
-                            $this->warn("Failed to add to ChromaDB: " . $e->getMessage());
+                        if (!$dryRun && !empty($batchVerses)) {
+                            try {
+                                $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $batchEmbeddings);
+                            } catch (\Exception $e) {
+                                // Quiet fail for Chroma
+                            }
                         }
+
+                        $chapter++;
+
+                    } catch (\Exception $e) {
+                        $this->error("Error in {$bookSlug} Ch {$chapter}: " . $e->getMessage());
+                        $hasMoreChapters = false;
                     }
                 }
             }

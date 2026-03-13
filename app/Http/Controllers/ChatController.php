@@ -81,7 +81,7 @@ class ChatController extends Controller
         }
 
         // 1. Determine Bible Version
-        $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'WEB');
+        $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
         
         // 2. Vector Search for RAG (if available)
         $context = "";
@@ -176,6 +176,9 @@ class ChatController extends Controller
             \Illuminate\Support\Facades\Log::error("Ollama Chat failed: " . $e->getMessage());
         }
 
+        // 5. Systematic Footnotes
+        $aiContent = $this->attachSystematicFootnotes($aiContent, $bibleVersion);
+
         $aiMessage = [
             'role' => 'assistant',
             'content' => $aiContent,
@@ -264,7 +267,7 @@ class ChatController extends Controller
     public function updateBibleVersion(Request $request)
     {
         $request->validate([
-            'bible_version' => 'required|string|in:KJV,ASV,WEB',
+            'bible_version' => 'required|string|in:BSB,KJV,ASV,WEB',
         ]);
 
         $user = Auth::user();
@@ -275,5 +278,57 @@ class ChatController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    private function attachSystematicFootnotes($content, $version)
+    {
+        // Regex to match "Book Chapter:Verse" (e.g., "John 3:16", "1 John 1:9", "Genesis 1:1-3")
+        $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)\s+(\d+):(\d+)(?:-(\d+))?/';
+        
+        if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            return $content;
+        }
+
+        $footnotes = [];
+        foreach ($matches as $match) {
+            $book = $match[1];
+            $chapter = (int)$match[2];
+            $verseStart = (int)$match[3];
+            $verseEnd = isset($match[4]) ? (int)$match[4] : $verseStart;
+
+            $reference = "{$book} {$chapter}:{$verseStart}" . ($verseStart != $verseEnd ? "-{$verseEnd}" : "");
+            
+            // Query for the verse text
+            // For ranges, we'll fetch all and join
+            $verses = Verse::where('version', $version)
+                ->where('book', 'like', "{$book}%") // Loose match for abbreviations
+                ->where('chapter', $chapter)
+                ->whereBetween('verse', [$verseStart, $verseEnd])
+                ->orderBy('verse')
+                ->get();
+
+            if ($verses->count() > 0) {
+                $text = $verses->pluck('text')->join(' ');
+                $fullRef = $verses->first()->full_reference;
+                if ($verseStart != $verseEnd) {
+                    $fullRef = "{$book} {$chapter}:{$verseStart}-{$verseEnd}";
+                }
+                $footnotes[] = "{$fullRef}: {$text} ({$version})";
+            }
+        }
+
+        if (empty($footnotes)) {
+            return $content;
+        }
+
+        // Deduplicate footnotes
+        $footnotes = array_unique($footnotes);
+
+        $footer = "\n\n---\n\n";
+        foreach ($footnotes as $index => $note) {
+            $footer .= "• " . $note . "\n";
+        }
+
+        return $content . $footer;
     }
 }
