@@ -39,15 +39,15 @@ class AdminDashboardController extends Controller
         return Inertia::render('Admin/Dashboard', [
             'stats' => [
                 'total_users' => $totalUsers,
-                'today_auth' => $todayMetrics->authenticated_calls ?? 0,
-                'today_unauth' => $todayMetrics->unauthenticated_calls ?? 0,
-                'today_active' => count($todayMetrics->active_users ?? []),
+                'today_auth' => $todayMetrics ? ($todayMetrics->authenticated_calls ?? 0) : 0,
+                'today_unauth' => $todayMetrics ? ($todayMetrics->unauthenticated_calls ?? 0) : 0,
+                'today_active' => $todayMetrics ? count($todayMetrics->active_users ?? []) : 0,
                 'avg_auth' => round($avgAuth, 2),
                 'avg_unauth' => round($avgUnauth, 2),
                 'avg_active' => round($avgActiveUsers, 2),
             ],
             'graphData' => $graphData,
-            'countries' => $todayMetrics->countries ?? [],
+            'countries' => $todayMetrics ? ($todayMetrics->countries ?? []) : [],
         ]);
     }
 }
