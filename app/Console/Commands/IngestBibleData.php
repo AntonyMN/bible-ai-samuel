@@ -24,6 +24,7 @@ class IngestBibleData extends Command
         'KJV' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json',
         'ASV' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_asv.json',
         'BBE' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_bbe.json',
+        'WEB' => 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_web.json',
     ];
 
     /**
