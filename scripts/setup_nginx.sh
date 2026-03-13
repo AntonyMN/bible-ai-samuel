@@ -8,7 +8,7 @@ API_DOMAIN="api.chatwithsamuel.org"
 WEB_ROOT="/var/www/bibleai/public"
 
 # Create NGINX config
-sudo tee /etc/nginx/sites-available/bibleai <<EOF
+printf "%s\n" "$SUDO_PASS" | sudo -S tee /etc/nginx/sites-available/bibleai <<EOF
 server {
     listen 80;
     server_name $DOMAIN $CHAT_DOMAIN $API_DOMAIN;
@@ -42,11 +42,11 @@ server {
 }
 EOF
 
-sudo ln -s /etc/nginx/sites-available/bibleai /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+echo "$SUDO_PASS" | sudo -S ln -s /etc/nginx/sites-available/bibleai /etc/nginx/sites-enabled/
+echo "$SUDO_PASS" | sudo -S nginx -t && echo "$SUDO_PASS" | sudo -S systemctl reload nginx
 
 # Install Certbot
-sudo apt-get install -y certbot python3-certbot-nginx
+echo "$SUDO_PASS" | sudo -S apt-get install -y certbot python3-certbot-nginx
 # We will ask the user to run the certbot command manually to handle the interaction
 # sudo certbot --nginx -d $DOMAIN -d $CHAT_DOMAIN -d $API_DOMAIN
 
