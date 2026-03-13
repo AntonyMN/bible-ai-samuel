@@ -426,7 +426,7 @@ onMounted(() => {
         <aside v-if="auth.user" class="hidden md:flex flex-col w-64 bg-stone-100 border-r border-stone-200 shadow-inner">
             <div class="p-4 border-b border-stone-200 bg-white/50">
                 <button 
-                    class="w-full py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition shadow-sm"
+                    class="w-full py-2 bg-purple-700 text-white rounded-lg text-sm font-medium hover:bg-purple-800 transition shadow-sm"
                     @click="startNewChat"
                 >
                     + New Conversation
@@ -455,7 +455,7 @@ onMounted(() => {
                         <button 
                             v-if="activeConversationId === conv.id"
                             @click.stop="startEditingTitle(conv)"
-                            class="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-amber-600 transition"
+                            class="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-purple-700 transition"
                         >
                             <i class="fas fa-pen text-[10px]"></i>
                         </button>
@@ -468,21 +468,21 @@ onMounted(() => {
         <!-- Main Content (Header + Chat + Input) -->
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Header -->
-            <header class="bg-white border-b border-stone-200 p-4 shadow-sm flex justify-between items-center bg-gradient-to-r from-amber-50 to-white">
+            <header class="bg-white border-b border-stone-200 p-4 shadow-sm flex justify-between items-center bg-gradient-to-r from-purple-50 to-white font-['Outfit']">
             <div class="flex items-center space-x-2">
-                <div class="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center text-white shadow-lg transform hover:rotate-12 transition-transform duration-300">
+                <div class="w-12 h-12 bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg transform hover:rotate-12 transition-transform duration-300">
                     <i class="fas fa-bible text-2xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-serif font-bold text-stone-800 tracking-tight">Samuel.ai</h1>
-                    <p class="text-sm text-amber-700 italic">"Your faithful brother, Samuel"</p>
+                    <h1 class="text-3xl font-['Gentium_Book_Plus'] font-bold text-stone-800 tracking-tight">Samuel</h1>
+                    <p class="text-sm text-purple-800 italic">"Your faithful brother, Samuel"</p>
                 </div>
             </div>
             
             <div class="flex items-center space-x-3">
                 <!-- Agent Selector -->
-                <div v-if="availableModels.length > 0" class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-amber-300 transition-colors h-10 shadow-sm">
-                    <i class="fas fa-robot text-xs text-amber-600"></i>
+                <div v-if="availableModels.length > 0" class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-purple-300 transition-colors h-10 shadow-sm">
+                    <i class="fas fa-robot text-xs text-purple-700"></i>
                     <select 
                         v-model="selectedModel" 
                         class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
@@ -494,8 +494,8 @@ onMounted(() => {
                 </div>
 
                 <!-- Bible Version Selector -->
-                <div class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-amber-300 transition-colors h-10 shadow-sm">
-                    <i class="fas fa-book-open text-xs text-amber-600"></i>
+                <div class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-purple-300 transition-colors h-10 shadow-sm">
+                    <i class="fas fa-book-open text-xs text-purple-700"></i>
                     <select 
                         v-model="selectedBibleVersion" 
                         class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
@@ -509,18 +509,18 @@ onMounted(() => {
                 <!-- Voice Settings Discovery Button -->
                 <button 
                     @click="showTtsModal = true" 
-                    class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:bg-amber-50 hover:border-amber-300 transition-all group h-10 shadow-sm"
+                    class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:bg-purple-50 hover:border-purple-300 transition-all group h-10 shadow-sm"
                     title="Sanctuary Voice Settings"
                 >
-                    <i class="fas fa-volume-up text-xs text-amber-600"></i>
-                    <span class="text-xs font-bold text-stone-600 group-hover:text-amber-700">Voice Settings</span>
+                    <i class="fas fa-volume-up text-xs text-purple-700"></i>
+                    <span class="text-xs font-bold text-stone-600 group-hover:text-purple-800">Voice Settings</span>
                 </button>
                 <div v-if="auth.user" class="relative">
                     <button 
                         @click="showUserDropdown = !showUserDropdown"
-                        class="flex items-center space-x-2 p-1 rounded-full hover:bg-stone-100 transition-colors border border-transparent focus:border-amber-200 outline-none"
+                        class="flex items-center space-x-2 p-1 rounded-full hover:bg-stone-100 transition-colors border border-transparent focus:border-purple-200 outline-none"
                     >
-                        <div class="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 shadow-inner">
+                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 shadow-inner">
                             <i class="fas fa-user text-sm"></i>
                         </div>
                         <i class="fas fa-chevron-down text-[10px] text-stone-400"></i>
@@ -537,7 +537,7 @@ onMounted(() => {
                         </div>
                         <Link 
                             :href="route('profile.edit')" 
-                            class="flex items-center space-x-3 px-4 py-2 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                            class="flex items-center space-x-3 px-4 py-2 text-sm text-stone-600 hover:bg-purple-50 hover:text-purple-800 transition-colors"
                         >
                             <i class="fas fa-id-card w-4"></i>
                             <span>Profile</span>
@@ -553,8 +553,8 @@ onMounted(() => {
                     </div>
                 </div>
                 <div v-else class="flex items-center space-x-2">
-                    <a :href="route('login')" class="flex items-center px-4 h-10 text-sm font-medium text-amber-700 hover:bg-amber-50 rounded-full transition-colors">Login</a>
-                    <a :href="route('register')" class="flex items-center px-5 h-10 bg-amber-600 text-white rounded-full text-sm font-bold hover:bg-amber-700 transition shadow-sm hover:shadow-md">Sign Up</a>
+                    <a :href="route('login')" class="flex items-center px-4 h-10 text-sm font-medium text-purple-800 hover:bg-purple-50 rounded-full transition-colors">Login</a>
+                    <a :href="route('register')" class="flex items-center px-5 h-10 bg-purple-700 text-white rounded-full text-sm font-bold hover:bg-purple-800 transition shadow-sm hover:shadow-md">Sign Up</a>
                 </div>
             </div>
         </header>
@@ -570,26 +570,26 @@ onMounted(() => {
                     <p class="text-sm text-stone-400 max-w-sm">I am Samuel, your brother in faith. How may I encourage you through the Word today?</p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 max-w-md w-full mt-4">
-                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-amber-50 hover:border-amber-200 text-left transition shadow-sm group" @click="newMessage = 'Give me comfort in my time of trouble'">
-                        <i class="fas fa-heart text-amber-200 group-hover:text-amber-500 mr-2"></i>
+                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-purple-50 hover:border-purple-200 text-left transition shadow-sm group" @click="newMessage = 'Give me comfort in my time of trouble'">
+                        <i class="fas fa-heart text-purple-200 group-hover:text-purple-700 mr-2"></i>
                         "Give me comfort..."
                     </button>
-                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-amber-50 hover:border-amber-200 text-left transition shadow-sm group" @click="newMessage = 'What does the bible say about wisdom?'">
-                        <i class="fas fa-lightbulb text-amber-200 group-hover:text-amber-500 mr-2"></i>
+                    <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-purple-50 hover:border-purple-200 text-left transition shadow-sm group" @click="newMessage = 'What does the bible say about wisdom?'">
+                        <i class="fas fa-lightbulb text-purple-200 group-hover:text-purple-700 mr-2"></i>
                         "What about wisdom?"
                     </button>
                 </div>
             </div>
 
             <div v-for="(msg, index) in messages" :key="index" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
-                <div :class="['max-w-[85%] rounded-3xl px-6 py-4 shadow-md relative group transition-all duration-300', msg.role === 'user' ? 'bg-amber-600 text-white rounded-tr-none hover:bg-amber-700' : 'bg-white text-stone-800 border border-stone-100 rounded-tl-none hover:border-amber-100']">
+                <div :class="['max-w-[85%] rounded-3xl px-6 py-4 shadow-md relative group transition-all duration-300', msg.role === 'user' ? 'bg-purple-700 text-white rounded-tr-none hover:bg-purple-800' : 'bg-white text-stone-800 border border-stone-100 rounded-tl-none hover:border-purple-100']">
                     <!-- Message Content -->
                     <div v-if="msg.role === 'assistant'" class="markdown-content text-base leading-relaxed relative">
                         <div v-html="parseMarkdown(msg.content)"></div>
                         
                         <!-- Highlighting Overlay while speaking -->
-                        <div v-if="isSpeaking && currentlySpeakingMessageIndex === index" class="absolute inset-x-0 top-0 bg-white z-10 p-1 rounded-lg border border-amber-100 shadow-sm animate-in fade-in transition-all">
-                             <div class="text-[10px] text-amber-600 font-bold uppercase tracking-widest mb-2 flex justify-between">
+                        <div v-if="isSpeaking && currentlySpeakingMessageIndex === index" class="absolute inset-x-0 top-0 bg-white z-10 p-1 rounded-lg border border-purple-100 shadow-sm animate-in fade-in transition-all">
+                             <div class="text-[10px] text-purple-700 font-bold uppercase tracking-widest mb-2 flex justify-between">
                                 <span>Reading Now...</span>
                                 <button @click="stopSpeech" class="hover:text-red-500 transition"><i class="fas fa-times"></i></button>
                              </div>
@@ -597,7 +597,7 @@ onMounted(() => {
                                 <template v-for="(wordObj, wIdx) in getWordsWithOffsets(msg.content)" :key="wIdx">
                                     <span 
                                         :class="['transition-colors duration-150 rounded px-0.5', 
-                                            currentHighlightIndex >= wordObj.start && currentHighlightIndex < wordObj.end ? 'bg-amber-400 text-stone-900 font-bold scale-110' : ''
+                                            currentHighlightIndex >= wordObj.start && currentHighlightIndex < wordObj.end ? 'bg-purple-200 text-stone-900 font-bold scale-110' : ''
                                         ]"
                                     >
                                         {{ wordObj.word }}
@@ -616,7 +616,7 @@ onMounted(() => {
                         </p>
                         <button 
                             @click="resendMessage(msg.content, index)" 
-                            class="bg-white text-amber-700 text-[10px] font-bold px-3 py-1 rounded-lg hover:bg-amber-50 transition shadow-sm flex items-center space-x-1"
+                            class="bg-white text-purple-800 text-[10px] font-bold px-3 py-1 rounded-lg hover:bg-purple-50 transition shadow-sm flex items-center space-x-1"
                         >
                             <i class="fas fa-sync-alt text-[8px]"></i>
                             <span>Retry Now</span>
@@ -652,15 +652,15 @@ onMounted(() => {
                     <!-- Action Buttons Overlay -->
                     <div :class="['absolute top-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1', msg.role === 'user' ? '-left-6' : '-right-10 flex-col space-y-1 items-start top-1']">
                         <template v-if="msg.role === 'user'">
-                            <button v-if="msg.failed" @click="resendMessage(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-full text-amber-600 hover:text-amber-700 shadow-sm transition transform hover:rotate-45" title="Retry">
+                            <button v-if="msg.failed" @click="resendMessage(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-full text-purple-700 hover:text-purple-800 shadow-sm transition transform hover:rotate-45" title="Retry">
                                 <i class="fas fa-sync-alt text-[10px]"></i>
                             </button>
                         </template>
                         <template v-else>
-                            <button @click="copyToClipboard(msg.content)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-amber-600 shadow-sm transition" title="Copy Content">
+                            <button @click="copyToClipboard(msg.content)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-purple-700 shadow-sm transition" title="Copy Content">
                                 <i class="fas fa-copy text-[10px]"></i>
                             </button>
-                            <button @click="readOutLoud(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-amber-600 shadow-sm transition" :title="isSpeaking && !isPaused && currentlySpeakingMessageIndex === index ? 'Pause' : 'Read Out Loud'">
+                            <button @click="readOutLoud(msg.content, index)" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-purple-700 shadow-sm transition" :title="isSpeaking && !isPaused && currentlySpeakingMessageIndex === index ? 'Pause' : 'Read Out Loud'">
                                 <i :class="['fas text-[10px]', isSpeaking && !isPaused && currentlySpeakingMessageIndex === index ? 'fa-pause' : 'fa-volume-up']"></i>
                             </button>
                             <button v-if="isSpeaking && currentlySpeakingMessageIndex === index" @click="stopSpeech" class="p-1.5 bg-white border border-stone-200 rounded-lg text-stone-400 hover:text-red-600 shadow-sm transition" title="Stop">
@@ -672,8 +672,8 @@ onMounted(() => {
             </div>
             <div v-if="isTyping" class="flex justify-start">
                 <div class="bg-white text-stone-500 border border-stone-100 rounded-3xl rounded-tl-none px-6 py-4 shadow-md flex items-center space-x-3 transition-all animate-pulse">
-                    <i class="fas fa-circle-notch fa-spin text-sm text-amber-600"></i>
-                    <span class="text-sm font-serif italic tracking-wide">Samuel is searching the scriptures for you...</span>
+                    <i class="fas fa-circle-notch fa-spin text-sm text-purple-700"></i>
+                    <span class="text-sm font-['Gentium_Book_Plus'] italic tracking-wide">Samuel is searching the scriptures for you...</span>
                 </div>
             </div>
         </main>
@@ -684,12 +684,12 @@ onMounted(() => {
                 <input 
                     v-model="newMessage" 
                     type="text" 
-                    class="w-full pl-6 pr-14 py-4 bg-stone-50 border border-stone-200 rounded-full focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all text-base shadow-sm"
+                    class="w-full pl-6 pr-14 py-4 bg-stone-50 border border-stone-200 rounded-full focus:ring-4 focus:ring-purple-500/10 focus:border-purple-700 outline-none transition-all text-base shadow-sm font-['Outfit']"
                     placeholder="Ask a biblical question..."
                     @keyup.enter="sendMessage"
                 >
                 <button 
-                    class="absolute right-2 top-2 p-2 bg-amber-600 text-white rounded-full hover:bg-amber-700 transition-all duration-300 shadow-md disabled:opacity-30 flex items-center justify-center w-12 h-12 transform hover:scale-105"
+                    class="absolute right-2 top-2 p-2 bg-purple-700 text-white rounded-full hover:bg-purple-800 transition-all duration-300 shadow-md disabled:opacity-30 flex items-center justify-center w-12 h-12 transform hover:scale-105"
                     :disabled="!newMessage.trim() || isTyping"
                     @click="sendMessage"
                 >
@@ -698,15 +698,15 @@ onMounted(() => {
                 </button>
             </div>
             <div class="mt-2 text-center">
-                <p class="text-[10px] text-stone-400 font-serif">A spiritual companion powered by the light of the word.</p>
+                <p class="text-[10px] text-stone-400 font-['Gentium_Book_Plus']">A spiritual companion powered by the light of the word.</p>
             </div>
         </footer>
 
         <!-- TTS Settings Modal -->
-        <div v-if="showTtsModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div v-if="showTtsModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 font-['Outfit']">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-stone-100">
-                <div class="bg-amber-600 px-6 py-4 flex justify-between items-center text-white">
-                    <h3 class="text-xl font-serif font-bold italic">Sanctuary Voice Settings</h3>
+                <div class="bg-purple-700 px-6 py-4 flex justify-between items-center text-white">
+                    <h3 class="text-xl font-['Gentium_Book_Plus'] font-bold italic">Sanctuary Voice Settings</h3>
                     <button @click="showTtsModal = false" class="hover:bg-white/20 rounded-full p-1 transition">
                         <i class="fas fa-times"></i>
                     </button>
@@ -717,7 +717,7 @@ onMounted(() => {
                         <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Language</label>
                         <div 
                             @click="showLangDropdown = !showLangDropdown"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-amber-300 shadow-sm"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-purple-300 shadow-sm"
                         >
                             <span>{{ filteredLanguages.find(l => l.code === ttsLanguage)?.name || 'Select Language' }}</span>
                             <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showLangDropdown ? 'rotate-180' : '']"></i>
@@ -729,7 +729,7 @@ onMounted(() => {
                                     v-model="langSearchQuery" 
                                     type="text" 
                                     placeholder="Search languages..."
-                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 outline-none"
+                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-purple-700 outline-none"
                                 >
                             </div>
                             <div class="max-h-48 overflow-y-auto">
@@ -740,7 +740,7 @@ onMounted(() => {
                                     class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
                                 >
                                     <span>{{ lang.name }}</span>
-                                    <i v-if="ttsLanguage === lang.code" class="fas fa-check text-xs text-amber-600"></i>
+                                    <i v-if="ttsLanguage === lang.code" class="fas fa-check text-xs text-purple-700"></i>
                                 </div>
                             </div>
                         </div>
@@ -751,7 +751,7 @@ onMounted(() => {
                         <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Reader (Voice)</label>
                         <div 
                             @click="showVoiceDropdown = !showVoiceDropdown"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-amber-300 shadow-sm"
+                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-purple-300 shadow-sm"
                         >
                             <span class="truncate">{{ selectedVoice || 'Select Voice' }}</span>
                             <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showVoiceDropdown ? 'rotate-180' : '']"></i>
@@ -763,7 +763,7 @@ onMounted(() => {
                                     v-model="voiceSearchQuery" 
                                     type="text" 
                                     placeholder="Search reader name..."
-                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-amber-500 outline-none"
+                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-purple-700 outline-none"
                                 >
                             </div>
                             <div class="max-h-48 overflow-y-auto">
@@ -774,7 +774,7 @@ onMounted(() => {
                                     class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
                                 >
                                     <span class="truncate">{{ v.name }}</span>
-                                    <i v-if="selectedVoice === v.name" class="fas fa-check text-xs text-amber-600"></i>
+                                    <i v-if="selectedVoice === v.name" class="fas fa-check text-xs text-purple-700"></i>
                                 </div>
                                 <div v-if="filteredVoices.length === 0" class="px-4 py-6 text-center text-xs text-stone-400 italic">
                                     No readers found for this search.
@@ -787,7 +787,7 @@ onMounted(() => {
                     <div>
                         <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 flex justify-between">
                             <span>Narration Speed</span>
-                            <span class="text-amber-600 font-mono">{{ ttsRate }}x</span>
+                            <span class="text-purple-700 font-mono">{{ ttsRate }}x</span>
                         </label>
                         <input 
                             type="range" 
@@ -795,7 +795,7 @@ onMounted(() => {
                             min="0.5" 
                             max="2.0" 
                             step="0.1"
-                            class="w-full accent-amber-600 h-1.5 bg-stone-100 rounded-lg appearance-none cursor-pointer"
+                            class="w-full accent-purple-700 h-1.5 bg-stone-100 rounded-lg appearance-none cursor-pointer"
                         >
                         <div class="flex justify-between text-[10px] text-stone-400 mt-1">
                             <span>Slow</span>
