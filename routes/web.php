@@ -23,11 +23,11 @@ Route::domain('chat.' . $domain)->group(function () {
         Route::post('/user/bible-version', [ChatController::class, 'updateBibleVersion'])->name('user.bible-version');
         Route::patch('/conversations/{id}/title', [ChatController::class, 'updateTitle'])->name('chat.update-title');
     });
+});
 
-    // Admin Routes
-    Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
-        Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');
-    });
+// Admin Routes (Global)
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');
 });
 
 // Root Domain Landing Page
