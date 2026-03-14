@@ -26,11 +26,23 @@ class TrackUsage
             return $next($request);
         }
 
-        $response = $next($request);
+        return $next($request);
+    }
 
-        // Only track successful or redirect responses to avoid pollution from 404s/etc if desired
-        // For now, let's track everything that gets past middleware
-        
+    /**
+     * Terminate the request and capture metrics.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Illuminate\Http\Response  $response
+     * @return void
+     */
+    public function terminate(Request $request, $response)
+    {
+        // Only track if it's not a debug/asset route
+        if ($request->is('_debugbar*', 'sanctum/*', 'up', 'js/*', 'css/*', 'images/*')) {
+            return;
+        }
+
         $today = Carbon::today()->toDateString();
         $isAuth = Auth::check();
         
@@ -39,14 +51,14 @@ class TrackUsage
             [
                 'authenticated_calls' => 0,
                 'unauthenticated_calls' => 0,
-                'active_users' => [], // We'll store user IDs to count unique active users
+                'active_users' => [],
                 'countries' => []
             ]
         );
 
         if ($isAuth) {
             $metric->increment('authenticated_calls');
-            $userId = Auth::id();
+            $userId = (string) Auth::id();
             if (!in_array($userId, $metric->active_users ?? [])) {
                 $metric->push('active_users', $userId, true);
             }
@@ -56,12 +68,12 @@ class TrackUsage
 
         // Country tracking (IP based lookup)
         $ip = $request->ip();
-        if ($ip && $ip !== '127.0.0.1') {
+        if ($ip && $ip !== '127.0.0.1' && $ip !== '::1') {
             $country = Cache::remember("ip-country-{$ip}", 86400, function () use ($ip) {
                 try {
-                    $response = Http::timeout(2)->get("http://ip-api.com/json/{$ip}?fields=countryCode");
-                    if ($response->successful()) {
-                        return $response->json('countryCode');
+                    $res = Http::timeout(2)->get("http://ip-api.com/json/{$ip}?fields=countryCode");
+                    if ($res->successful()) {
+                        return $res->json('countryCode');
                     }
                 } catch (\Exception $e) {
                     // Silently fail
@@ -76,7 +88,5 @@ class TrackUsage
                 $metric->save();
             }
         }
-
-        return $response;
     }
 }

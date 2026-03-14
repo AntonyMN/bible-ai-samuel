@@ -29,7 +29,7 @@ class UsageRateLimit
         $isAuth = Auth::check();
         
         if ($isAuth) {
-            $userId = Auth::id();
+            $userId = (string) Auth::id();
             $cacheKey = "rate_limit_auth_{$userId}_{$today}";
             $limit = 10;
         } else {
@@ -46,14 +46,34 @@ class UsageRateLimit
             ], 429);
         }
 
-        $response = $next($request);
+        return $next($request);
+    }
 
-        // Only increment if it's a successful processing of the request
-        // (e.g. not a validation error, though we could count those too)
-        if ($response->getStatusCode() < 400) {
-            Cache::put($cacheKey, $currentCount + 1, now()->endOfDay());
+    /**
+     * Terminate the request and increment rate limit if successful.
+     */
+    public function terminate(Request $request, $response)
+    {
+        // Don't limit admins
+        if (Auth::check() && Auth::user()->is_admin) {
+            return;
         }
 
-        return $response;
+        // Only increment if successful (status 200-299)
+        if ($response->getStatusCode() >= 200 && $response->getStatusCode() < 300) {
+            $today = Carbon::today()->toDateString();
+            $isAuth = Auth::check();
+            
+            if ($isAuth) {
+                $userId = (string) Auth::id();
+                $cacheKey = "rate_limit_auth_{$userId}_{$today}";
+            } else {
+                $ip = $request->ip();
+                $cacheKey = "rate_limit_unauth_{$ip}_{$today}";
+            }
+
+            $currentCount = Cache::get($cacheKey, 0);
+            Cache::put($cacheKey, $currentCount + 1, now()->endOfDay());
+        }
     }
 }
