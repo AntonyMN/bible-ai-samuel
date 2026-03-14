@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class OllamaService
 {
@@ -26,17 +28,26 @@ class OllamaService
 
     public function chat(array $messages, $model = null)
     {
+        if ($this->isCircuitBroken()) {
+            throw new \Exception("GPU connectivity is temporarily suspended due to repeated failures (Circuit Breaker).");
+        }
+
         if ($this->isRunPod()) {
             return $this->runPodChat($messages, $model);
         }
 
-        $response = Http::timeout(120)->post("{$this->baseUrl}/api/chat", [
-            'model' => $model ?? $this->model,
-            'messages' => $messages,
-            'stream' => false,
-        ]);
-
-        return $response->json();
+        try {
+            $response = Http::timeout(120)->post("{$this->baseUrl}/api/chat", [
+                'name' => $model ?? $this->model,
+                'messages' => $messages,
+                'stream' => false,
+            ]);
+            $this->recordSuccess();
+            return $response->json();
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
     }
 
     protected function runPodChat(array $messages, $model = null)
@@ -49,21 +60,27 @@ class OllamaService
         }
         $prompt .= "Assistant: ";
 
-        $response = Http::timeout(120)
-            ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
-            ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
-                'input' => [
-                    'method_name' => 'generate',
+        try {
+            $response = Http::timeout(120)
+                ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
+                ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
                     'input' => [
-                        'model' => $model ?? $this->model,
-                        'prompt' => $prompt,
-                        'stream' => false,
-                        'stop' => ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:"],
-                        'temperature' => 0.7,
-                        'max_tokens' => 1000,
+                        'method_name' => 'generate',
+                        'input' => [
+                            'model' => $model ?? $this->model,
+                            'prompt' => $prompt,
+                            'stream' => false,
+                            'stop' => ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:"],
+                            'temperature' => 0.7,
+                            'max_tokens' => 1000,
+                        ]
                     ]
-                ]
-            ]);
+                ]);
+            $this->recordSuccess();
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
 
         $json = $response->json();
         
@@ -92,34 +109,48 @@ class OllamaService
 
     public function embed(string $text, $model = 'nomic-embed-text')
     {
+        if ($this->isCircuitBroken()) {
+            return [];
+        }
+
         if ($this->isRunPod()) {
             return $this->runPodEmbed($text, $model);
         }
 
-        $response = Http::timeout(60)->post("{$this->baseUrl}/api/embeddings", [
-            'model' => $model,
-            'prompt' => $text,
-        ]);
-
-        return $response->json()['embedding'] ?? [];
+        try {
+            $response = Http::timeout(60)->post("{$this->baseUrl}/api/embeddings", [
+                'model' => $model,
+                'prompt' => $text,
+            ]);
+            $this->recordSuccess();
+            return $response->json()['embedding'] ?? [];
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
     }
 
     protected function runPodEmbed(string $text, $model = 'nomic-embed-text')
     {
-        $response = Http::timeout(60)
-            ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
-            ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
-                'input' => [
-                    'method_name' => 'embeddings',
+        try {
+            $response = Http::timeout(60)
+                ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
+                ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
                     'input' => [
-                        'model' => $model,
-                        'prompt' => $text,
+                        'method_name' => 'embeddings',
+                        'input' => [
+                            'model' => $model,
+                            'prompt' => $text,
+                        ]
                     ]
-                ]
-            ]);
-
-        $json = $response->json();
-        return $json['output']['embedding'] ?? [];
+                ]);
+            $this->recordSuccess();
+            $json = $response->json();
+            return $json['output']['embedding'] ?? [];
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
     }
 
     public function generateStream(array $messages, $model = null)
@@ -140,17 +171,43 @@ class OllamaService
 
     public function listModels()
     {
-        if ($this->isRunPod()) {
-            // Return curated list of serverless models
-            return [
-                'models' => [
-                    ['name' => 'llama3.2:3b'],
-                    ['name' => 'llama3.1:8b'],
-                ]
-            ];
-        }
+        return Cache::remember('ollama_models_list', 3600, function () {
+            if ($this->isRunPod()) {
+                // Return curated list of serverless models
+                return [
+                    'models' => [
+                        ['name' => 'llama3.2:3b'],
+                        ['name' => 'llama3.1:8b'],
+                    ]
+                ];
+            }
 
-        $response = Http::get("{$this->baseUrl}/api/tags");
-        return $response->json();
+            try {
+                $response = Http::timeout(2)->get("{$this->baseUrl}/api/tags");
+                return $response->json();
+            } catch (\Exception $e) {
+                return ['models' => []];
+            }
+        });
+    }
+
+    protected function isCircuitBroken()
+    {
+        return Cache::has('ollama_circuit_broken');
+    }
+
+    protected function recordFailure()
+    {
+        $count = Cache::increment('ollama_failure_count');
+        if ($count >= 3) {
+            Log::warning("Circuit breaker triggered for Ollama service. Suspending requests for 15 minutes.");
+            Cache::put('ollama_circuit_broken', true, now()->addMinutes(15));
+            Cache::forget('ollama_failure_count');
+        }
+    }
+
+    protected function recordSuccess()
+    {
+        Cache::forget('ollama_failure_count');
     }
 }

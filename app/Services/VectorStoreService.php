@@ -41,4 +41,27 @@ class VectorStoreService
             'name' => $name,
         ]);
     }
+
+    public function count(string $collection = 'bible_verses')
+    {
+        try {
+            $response = Http::get("{$this->baseUrl}/api/v1/collections");
+            $collections = $response->json();
+            
+            $collectionId = null;
+            foreach ($collections as $c) {
+                if ($c['name'] === $collection) {
+                    $collectionId = $c['id'];
+                    break;
+                }
+            }
+            
+            if (!$collectionId) return 0;
+
+            $response = Http::get("{$this->baseUrl}/api/v1/collections/{$collectionId}/count");
+            return $response->json();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
 }

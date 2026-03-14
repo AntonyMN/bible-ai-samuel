@@ -15,6 +15,20 @@ class GenerateConversationTitle implements ShouldQueue
     protected $firstMessage;
 
     /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 2;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var int
+     */
+    public $backoff = 600; // 10 minutes
+
+    /**
      * Create a new job instance.
      */
     public function __construct($conversationId, $firstMessage)
