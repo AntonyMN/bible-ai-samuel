@@ -77,10 +77,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.volunteer_activism, size: 64, color: Colors.stone[300]),
+                          Icon(Icons.volunteer_activism, size: 64, color: Colors.grey[300]),
                           const SizedBox(height: 16),
                           Text('Peace be with you.', 
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.stone[600])),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.grey[600])),
                         ],
                       ),
                     )
@@ -129,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
           : MarkdownBody(
               data: message.content,
               styleSheet: MarkdownStyleSheet(
-                p: TextStyle(color: Colors.stone[800], fontSize: 16),
+                p: TextStyle(color: Colors.grey[800], fontSize: 16),
               ),
             ),
       ),
@@ -151,7 +151,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple)),
             const SizedBox(width: 8),
-            Text('Samuel is searching the scriptures...', style: TextStyle(color: Colors.stone[600], fontStyle: FontStyle.italic)),
+            Text('Samuel is searching the scriptures...', style: TextStyle(color: Colors.grey[600], fontStyle: FontStyle.italic)),
           ],
         ),
       ),
