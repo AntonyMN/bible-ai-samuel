@@ -61,4 +61,14 @@ class User extends Authenticatable
     {
         return $value ?: 'WEB';
     }
+
+    /**
+     * Get the access tokens that belong to the user.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
+     */
+    public function tokens()
+    {
+        return $this->morphMany(\App\Models\PersonalAccessToken::class, 'tokenable');
+    }
 }
