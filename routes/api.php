@@ -36,6 +36,13 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
     });
 
     Route::post('/register', function (Request $request) {
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8|confirmed',
+                'device_name' => 'required',
+            ]);
         } catch (ValidationException $e) {
             $errors = $e->errors();
             $firstError = collect($errors)->flatten()->first();
