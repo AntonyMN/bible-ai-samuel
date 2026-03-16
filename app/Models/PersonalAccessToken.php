@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Laravel\Sanctum\Contracts\HasAbilities;
 use MongoDB\Laravel\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class PersonalAccessToken extends Model implements HasAbilities
 {
