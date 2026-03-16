@@ -9,7 +9,12 @@ use Illuminate\Validation\ValidationException;
 
 Route::domain('api.chatwithsamuel.org')->group(function () {
     Route::get('/ping', function () {
-        return response()->json(['status' => 'ok', 'time' => now()->toDateTimeString(), 'v' => 'debug_v1']);
+        return response()->json([
+            'status' => 'ok', 
+            'time' => now()->toDateTimeString(), 
+            'v' => 'debug_v2',
+            'debug' => config('app.debug')
+        ]);
     });
 
     // Authentication
