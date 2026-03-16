@@ -115,4 +115,3 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
         });
     });
 });
-});
