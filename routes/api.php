@@ -8,36 +8,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 Route::domain('api.chatwithsamuel.org')->group(function () {
-    require_once app_path('Models/PersonalAccessToken.php');
-    config(['app.debug' => true]);
-
-    Route::get('/debug/files', function () {
-        $modelsDir = app_path('Models');
-        return response()->json([
-            'models_dir' => $modelsDir,
-            'exists' => is_dir($modelsDir),
-            'files' => is_dir($modelsDir) ? scandir($modelsDir) : [],
-            'app_files' => scandir(app_path())
-        ]);
-    });
-
-    Route::get('/ping', function () {
-        $modelPath = app_path('Models/PersonalAccessToken.php');
-        return response()->json([
-            'status' => 'ok', 
-            'time' => now()->toDateTimeString(), 
-            'v' => 'debug_v5',
-            'debug' => config('app.debug'),
-            'model_exists' => file_exists($modelPath),
-            'model_path' => $modelPath,
-            'model_content' => file_exists($modelPath) ? file_get_contents($modelPath) : 'NOT_FOUND'
-        ]);
-    });
-
     // Authentication
     Route::post('/login', function (Request $request) {
         try {
-            \Illuminate\Support\Facades\Log::info('Login Attempt: ' . $request->email);
             $request->validate([
                 'email' => 'required|email',
                 'password' => 'required',
@@ -54,7 +27,6 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             }
 
             $token = $user->createToken($request->device_name)->plainTextToken;
-            \Illuminate\Support\Facades\Log::info('Login Success for: ' . $request->email);
 
             return response()->json([
                 'token' => $token,
@@ -71,14 +43,13 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'message' => 'Server error during login: ' . $e->getMessage(),
+                'message' => 'Server error during login',
             ], 500);
         }
     });
 
     Route::post('/register', function (Request $request) {
         try {
-            \Illuminate\Support\Facades\Log::info('Register Attempt: ' . $request->email);
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -93,7 +64,6 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             ]);
 
             $token = $user->createToken($request->device_name)->plainTextToken;
-            \Illuminate\Support\Facades\Log::info('Register Success for: ' . $request->email);
 
             return response()->json([
                 'token' => $token,
@@ -117,7 +87,7 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'message' => 'Server error during registration: ' . $e->getMessage(),
+                'message' => 'Server error during registration',
             ], 500);
         }
     });
@@ -144,4 +114,5 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             return response()->json(['message' => 'Logged out']);
         });
     });
+});
 });
