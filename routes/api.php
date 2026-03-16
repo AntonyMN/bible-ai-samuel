@@ -8,11 +8,13 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 Route::domain('api.chatwithsamuel.org')->group(function () {
+    config(['app.debug' => true]);
+
     Route::get('/ping', function () {
         return response()->json([
             'status' => 'ok', 
             'time' => now()->toDateTimeString(), 
-            'v' => 'debug_v2',
+            'v' => 'debug_v3',
             'debug' => config('app.debug')
         ]);
     });
