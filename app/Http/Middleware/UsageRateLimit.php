@@ -41,8 +41,12 @@ class UsageRateLimit
         $currentCount = Cache::get($cacheKey, 0);
 
         if ($currentCount >= $limit) {
+            $message = $isAuth 
+                ? "You've reached the testing limit of 10 questions per day. This limit is only for the testing phase. Thank you for your patience!"
+                : "You've reached the daily limit of 5 questions. Please log in for more, or come back tomorrow!";
+
             return response()->json([
-                'error' => "Daily limit reached ({$limit} requests). This is currently limited for testing purposes. Please try again tomorrow.",
+                'error' => $message,
             ], 429);
         }
 
