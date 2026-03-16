@@ -91,8 +91,10 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'message' => 'Server error during registration: ' . $e->getMessage(),
-            ], 500);
+                'error_debug' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 200);
         }
     });
 
