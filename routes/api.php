@@ -10,6 +10,16 @@ use Illuminate\Validation\ValidationException;
 Route::domain('api.chatwithsamuel.org')->group(function () {
     config(['app.debug' => true]);
 
+    Route::get('/debug/files', function () {
+        $modelsDir = app_path('Models');
+        return response()->json([
+            'models_dir' => $modelsDir,
+            'exists' => is_dir($modelsDir),
+            'files' => is_dir($modelsDir) ? scandir($modelsDir) : [],
+            'app_files' => scandir(app_path())
+        ]);
+    });
+
     Route::get('/ping', function () {
         $modelPath = app_path('Models/PersonalAccessToken.php');
         return response()->json([
