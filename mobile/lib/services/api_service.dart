@@ -91,21 +91,29 @@ class ApiService {
 
   Future<Map<String, dynamic>?> sendMessage(String message, {String? conversationId, List<Message>? history}) async {
     try {
+      final body = jsonEncode({
+        'message': message,
+        'conversation_id': conversationId,
+        'history': history?.map((m) => m.toJson()).toList(),
+      });
+      print('DEBUG: Sending message to ${Uri.parse('$baseUrl/chat/send')}');
+      print('DEBUG: Body: $body');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/chat/send'),
         headers: _headers,
-        body: jsonEncode({
-          'message': message,
-          'conversation_id': conversationId,
-          'history': history?.map((m) => m.toJson()).toList(),
-        }),
+        body: body,
       );
+
+      print('DEBUG: Response Status: ${response.statusCode}');
+      print('DEBUG: Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
       return null;
     } catch (e) {
+      print('DEBUG: Error sending message: $e');
       return null;
     }
   }

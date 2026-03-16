@@ -61,13 +61,8 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFAF9),
-          image: DecorationImage(
-            image: const AssetImage('assets/background_dot.png'), // Placeholder or subtle pattern
-            repeat: ImageRepeat.repeat,
-            opacity: 0.05,
-          ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFAFAF9),
         ),
         child: Column(
           children: [
