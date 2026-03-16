@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title inertia>{{ config('app.name', 'Samuel') }} - Your Faith Companion</title>
+        <link rel="icon" type="image/png" href="/favicon.png">
         <meta name="description" content="Samuel is your warm, humble, and encouraging Christian brother, offering scriptural advice and comfort based strictly on the Holy Bible.">
         <meta name="theme-color" content="#6B21A8">
 

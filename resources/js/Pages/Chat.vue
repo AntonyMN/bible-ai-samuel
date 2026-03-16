@@ -470,8 +470,8 @@ onMounted(() => {
             <!-- Header -->
             <header class="bg-white border-b border-stone-200 p-4 shadow-sm flex justify-between items-center bg-gradient-to-r from-purple-50 to-white font-['Outfit']">
             <div class="flex items-center space-x-2">
-                <div class="w-12 h-12 bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg transform hover:rotate-12 transition-transform duration-300">
-                    <i class="fas fa-bible text-2xl"></i>
+                <div class="w-12 h-12 rounded-full overflow-hidden shadow-lg transform hover:rotate-12 transition-transform duration-300">
+                    <img src="/images/logo.png" alt="Samuel Logo" class="w-full h-full object-cover">
                 </div>
                 <div>
                     <h1 class="text-3xl font-['Gentium_Book_Plus'] font-bold text-stone-800 tracking-tight">Samuel</h1>
