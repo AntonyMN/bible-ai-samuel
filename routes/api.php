@@ -79,12 +79,6 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
     Route::post('/register', function (Request $request) {
         try {
             \Illuminate\Support\Facades\Log::info('Register Attempt: ' . $request->email);
-            $modelPath = app_path('Models/PersonalAccessToken.php');
-            \Illuminate\Support\Facades\Log::info('Checking for model at: ' . $modelPath . ' exists: ' . (file_exists($modelPath) ? 'YES' : 'NO'));
-            if (!file_exists($modelPath)) {
-                 return response()->json(['error' => 'Model file missing on server', 'path' => $modelPath], 200);
-            }
-
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
@@ -123,10 +117,8 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
-                'error_debug' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ], 200);
+                'message' => 'Server error during registration: ' . $e->getMessage(),
+            ], 500);
         }
     });
 
