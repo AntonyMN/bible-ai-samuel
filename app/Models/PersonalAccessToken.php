@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
-use Laravel\Sanctum\Contracts\HasAbilities;
-use MongoDB\Laravel\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
+use MongoDB\Laravel\Eloquent\DocumentModel;
 
-class PersonalAccessToken extends Model implements HasAbilities
+class PersonalAccessToken extends SanctumPersonalAccessToken
 {
+    use DocumentModel;
+
     protected $connection = 'mongodb';
     protected $collection = 'personal_access_tokens';
+
+    protected $keyType = 'string';
 
     /**
      * The attributes that are mass assignable.
@@ -34,65 +37,4 @@ class PersonalAccessToken extends Model implements HasAbilities
         'last_used_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
-
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array
-     */
-    protected $hidden = [
-        'token',
-    ];
-
-    /**
-     * Get the tokenable model that the access token belongs to.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\MorphTo
-     */
-    public function tokenable()
-    {
-        return $this->morphTo('tokenable');
-    }
-
-    /**
-     * Find the token instance matching the given token.
-     *
-     * @param  string  $token
-     * @return static|null
-     */
-    public static function findToken($token)
-    {
-        if (strpos($token, '|') === false) {
-            return static::where('token', hash('sha256', $token))->first();
-        }
-
-        [$id, $token] = explode('|', $token, 2);
-
-        if ($instance = static::find($id)) {
-            return hash_equals($instance->token, hash('sha256', $token)) ? $instance : null;
-        }
-    }
-
-    /**
-     * Determine if the token has a given ability.
-     *
-     * @param  string  $ability
-     * @return bool
-     */
-    public function can($ability)
-    {
-        return in_array('*', $this->abilities) ||
-               array_key_exists($ability, array_flip($this->abilities));
-    }
-
-    /**
-     * Determine if the token is missing a given ability.
-     *
-     * @param  string  $ability
-     * @return bool
-     */
-    public function cant($ability)
-    {
-        return ! $this->can($ability);
-    }
 }
