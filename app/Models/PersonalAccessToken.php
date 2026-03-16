@@ -1,5 +1,4 @@
 <?php
-die('PersonalAccessToken file loaded');
 
 namespace App\Models;
 

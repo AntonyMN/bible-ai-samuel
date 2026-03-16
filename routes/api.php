@@ -26,10 +26,11 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
         return response()->json([
             'status' => 'ok', 
             'time' => now()->toDateTimeString(), 
-            'v' => 'debug_v4',
+            'v' => 'debug_v5',
             'debug' => config('app.debug'),
             'model_exists' => file_exists($modelPath),
-            'model_path' => $modelPath
+            'model_path' => $modelPath,
+            'model_content' => file_exists($modelPath) ? file_get_contents($modelPath) : 'NOT_FOUND'
         ]);
     });
 
