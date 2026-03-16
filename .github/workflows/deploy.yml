@@ -18,8 +18,8 @@ jobs:
           username: ${{ secrets.DEPLOY_USERNAME }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           script: |
-            cd /var/www/bibleai
             git pull origin master
+            sed -i 's/APP_DEBUG=false/APP_DEBUG=true/g' .env
             composer install --no-interaction --prefer-dist --optimize-autoloader
             php artisan migrate --force
             npm install
