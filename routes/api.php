@@ -10,29 +10,40 @@ use Illuminate\Validation\ValidationException;
 Route::domain('api.chatwithsamuel.org')->group(function () {
     // Authentication
     Route::post('/login', function (Request $request) {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-            'device_name' => 'required',
-        ]);
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+                'device_name' => 'required',
+            ]);
 
-        $user = User::where('email', $request->email)->first();
+            $user = User::where('email', $request->email)->first();
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (! $user || ! Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'message' => 'The provided credentials are incorrect.',
+                    'errors' => ['email' => ['The provided credentials are incorrect.']]
+                ], 422);
+            }
+
+            $token = $user->createToken($request->device_name)->plainTextToken;
+
             return response()->json([
-                'message' => 'The provided credentials are incorrect.',
-                'errors' => ['email' => ['The provided credentials are incorrect.']]
-            ], 422);
+                'token' => $token,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Login error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Server error during login: ' . $e->getMessage(),
+            ], 500);
         }
-
-        return response()->json([
-            'token' => $user->createToken($request->device_name)->plainTextToken,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-        ]);
     });
 
     Route::post('/register', function (Request $request) {
