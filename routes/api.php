@@ -8,6 +8,14 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 Route::domain('api.chatwithsamuel.org')->group(function () {
+    Route::get('/ping-limits', function () {
+        $path = app_path('Http/Middleware/UsageRateLimit.php');
+        return response()->json([
+            'exists' => file_exists($path),
+            'content' => file_exists($path) ? file_get_contents($path) : 'NOT_FOUND'
+        ]);
+    });
+
     // Authentication
     Route::post('/login', function (Request $request) {
         try {
