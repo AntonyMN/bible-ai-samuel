@@ -11,6 +11,7 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
     // Authentication
     Route::post('/login', function (Request $request) {
         try {
+            \Illuminate\Support\Facades\Log::info('Login Attempt: ' . $request->email);
             $request->validate([
                 'email' => 'required|email',
                 'password' => 'required',
@@ -27,6 +28,7 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             }
 
             $token = $user->createToken($request->device_name)->plainTextToken;
+            \Illuminate\Support\Facades\Log::info('Login Success for: ' . $request->email);
 
             return response()->json([
                 'token' => $token,
@@ -38,6 +40,8 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Login error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
             return response()->json([
@@ -48,11 +52,30 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
 
     Route::post('/register', function (Request $request) {
         try {
+            \Illuminate\Support\Facades\Log::info('Register Attempt: ' . $request->email);
             $request->validate([
                 'name' => 'required|string|max:255',
                 'email' => 'required|string|email|max:255|unique:users',
                 'password' => 'required|string|min:8|confirmed',
                 'device_name' => 'required',
+            ]);
+
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+
+            $token = $user->createToken($request->device_name)->plainTextToken;
+            \Illuminate\Support\Facades\Log::info('Register Success for: ' . $request->email);
+
+            return response()->json([
+                'token' => $token,
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
             ]);
         } catch (ValidationException $e) {
             $errors = $e->errors();
@@ -61,22 +84,16 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
                 'message' => $firstError ?? 'Validation failed',
                 'errors' => $errors,
             ], 422);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Register fatal error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'message' => 'Server error during registration: ' . $e->getMessage(),
+            ], 500);
         }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json([
-            'token' => $user->createToken($request->device_name)->plainTextToken,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-            ],
-        ]);
     });
 
     // Guest Chat
