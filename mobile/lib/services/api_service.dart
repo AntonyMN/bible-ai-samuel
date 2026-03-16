@@ -5,7 +5,7 @@ import '../models/message.dart';
 import '../models/user.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://chat.chatwithsamuel.org/api';
+  static const String baseUrl = 'https://api.chatwithsamuel.org';
   
   String? _token;
 
