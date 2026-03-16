@@ -44,28 +44,24 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    bool success;
+    final result = _isLogin 
+      ? await authProvider.login(
+          _emailController.text,
+          _passwordController.text,
+        )
+      : await authProvider.register(
+          _nameController.text,
+          _emailController.text,
+          _passwordController.text,
+          _confirmPasswordController.text,
+        );
 
-    if (_isLogin) {
-      success = await authProvider.login(
-        _emailController.text,
-        _passwordController.text,
-      );
-    } else {
-      success = await authProvider.register(
-        _nameController.text,
-        _emailController.text,
-        _passwordController.text,
-        _confirmPasswordController.text,
-      );
-    }
-
-    if (success && mounted) {
+    if (result == null && mounted) {
       Navigator.pop(context);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Authentication failed. Please check your credentials.'),
+          content: Text(result ?? 'Authentication failed. Please check your credentials.'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

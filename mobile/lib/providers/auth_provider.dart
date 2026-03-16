@@ -13,29 +13,24 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _apiService.isAuthenticated;
 
-  Future<bool> login(String email, String password) async {
+  Future<String?> login(String email, String password) async {
     _isLoading = true;
     notifyListeners();
     
-    final success = await _apiService.login(email, password);
-    if (success) {
-      // Fetch user info if needed, or just set as authenticated
-      notifyListeners();
-    }
-    
+    final result = await _apiService.login(email, password);
     _isLoading = false;
     notifyListeners();
-    return success;
+    return result;
   }
 
-  Future<bool> register(String name, String email, String password, String passwordConfirmation) async {
+  Future<String?> register(String name, String email, String password, String passwordConfirmation) async {
     _isLoading = true;
     notifyListeners();
     
-    final success = await _apiService.register(name, email, password, passwordConfirmation);
+    final result = await _apiService.register(name, email, password, passwordConfirmation);
     _isLoading = false;
     notifyListeners();
-    return success;
+    return result;
   }
 
   Future<void> logout() async {

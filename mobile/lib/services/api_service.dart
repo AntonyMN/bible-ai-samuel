@@ -25,7 +25,7 @@ class ApiService {
     return headers;
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<String?> login(String email, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
@@ -37,20 +37,20 @@ class ApiService {
         }),
       );
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         _token = data['token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', _token!);
-        return true;
+        return null; // Success
       }
-      return false;
+      return data['message'] ?? 'Login failed';
     } catch (e) {
-      return false;
+      return 'Connection error: $e';
     }
   }
 
-  Future<bool> register(String name, String email, String password, String passwordConfirmation) async {
+  Future<String?> register(String name, String email, String password, String passwordConfirmation) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
@@ -64,16 +64,16 @@ class ApiService {
         }),
       );
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
         _token = data['token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', _token!);
-        return true;
+        return null; // Success
       }
-      return false;
+      return data['message'] ?? 'Registration failed';
     } catch (e) {
-      return false;
+      return 'Connection error: $e';
     }
   }
 
