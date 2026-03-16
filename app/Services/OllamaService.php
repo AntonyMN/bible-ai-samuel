@@ -37,7 +37,7 @@ class OllamaService
         }
 
         try {
-            $response = Http::timeout(120)->post("{$this->baseUrl}/api/chat", [
+            $response = Http::timeout(180)->post("{$this->baseUrl}/api/chat", [
                 'name' => $model ?? $this->model,
                 'messages' => $messages,
                 'stream' => false,
@@ -79,10 +79,12 @@ class OllamaService
             $this->recordSuccess();
         } catch (\Exception $e) {
             $this->recordFailure();
+            Log::error("RunPod Chat HTTP Error: " . $e->getMessage());
             throw $e;
         }
 
         $json = $response->json();
+        Log::info("RunPod Chat Response: " . json_encode($json));
         
         // Normalize response
         if (isset($json['output']['response'])) {

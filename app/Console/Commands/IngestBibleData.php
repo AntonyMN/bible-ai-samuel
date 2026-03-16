@@ -11,7 +11,7 @@ class IngestBibleData extends Command
      *
      * @var string
      */
-    protected $signature = 'bible:ingest {--bible-version= : The version to ingest (KJV, ASV, BBE)} {--dry-run}';
+    protected $signature = 'bible:ingest {--bible-version= : The version to ingest (KJV, ASV, BBE)} {--dry-run} {--skip-embedding : Skip vectorization (embedding) part to avoid GPU costs}';
 
     /**
      * The console command description.
@@ -122,7 +122,7 @@ class IngestBibleData extends Command
                             ]);
 
                             // Vectorization (Primary Version or Explicit)
-                            if ($internalVersion === 'BSB' || $targetVersion) {
+                            if (!$this->option('skip-embedding') && ($internalVersion === 'BSB' || $targetVersion)) {
                                 try {
                                     $embedding = $ollama->embed("{$fullReference} ({$internalVersion}): {$text}");
                                     

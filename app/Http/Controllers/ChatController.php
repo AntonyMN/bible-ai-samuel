@@ -156,15 +156,28 @@ class ChatController extends Controller
         $messages[] = ['role' => 'user', 'content' => $userMessage];
 
         // 4. Call Ollama
-        $aiContent = "I am sorry, I couldn't find an answer in the word right now. Please try again or rephrase your question.";
+        $fallbackResponse = "Peace be with you, {$userName}. I am currently reflecting on the Word. (Note: Data ingestion for the requested Bible version is currently in progress, so I am using my general wisdom for now). Please try your question again in a short while.";
+        $aiContent = $fallbackResponse;
         
         try {
+            // If context is empty, Samuel should mention he is still learning (ingesting)
+            if (empty($context)) {
+                $messages[] = ['role' => 'system', 'content' => "IMPORTANT: No specific Bible verses found for this topic yet. Please inform {$userName} kindly that you are currently ingesting new Bible data (BSB version) and will be better prepared to answer in a short while."];
+            }
+
             $response = $ollama->chat($messages, $model);
+            
             if (isset($response['message']['content'])) {
                 $aiContent = $response['message']['content'];
+            } elseif (is_string($response)) {
+                $aiContent = $response;
+            } elseif (isset($response['content'])) {
+                $aiContent = $response['content'];
             }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Ollama Chat failed: " . $e->getMessage());
+            // Circuit breaker has been cleared, but if it fails again, we use the fallback
+            $aiContent = $fallbackResponse;
         }
 
         // 5. Systematic Footnotes
