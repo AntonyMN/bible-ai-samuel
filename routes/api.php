@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 Route::domain('api.chatwithsamuel.org')->group(function () {
+    require_once app_path('Models/PersonalAccessToken.php');
     config(['app.debug' => true]);
 
     Route::get('/debug/files', function () {
