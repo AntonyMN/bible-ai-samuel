@@ -11,11 +11,14 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
     config(['app.debug' => true]);
 
     Route::get('/ping', function () {
+        $modelPath = app_path('Models/PersonalAccessToken.php');
         return response()->json([
             'status' => 'ok', 
             'time' => now()->toDateTimeString(), 
-            'v' => 'debug_v3',
-            'debug' => config('app.debug')
+            'v' => 'debug_v4',
+            'debug' => config('app.debug'),
+            'model_exists' => file_exists($modelPath),
+            'model_path' => $modelPath
         ]);
     });
 
