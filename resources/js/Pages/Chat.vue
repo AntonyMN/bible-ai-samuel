@@ -344,7 +344,7 @@ const parseMarkdown = (content) => {
 
 const handleLogout = () => {
     axios.post(route('logout')).then(() => {
-        window.location.href = '/';
+        window.location.href = route('landing');
     });
 };
 
