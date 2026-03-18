@@ -27,8 +27,8 @@ class CleanTtsFiles extends Command
         foreach ($files as $file) {
             $lastModified = Carbon::createFromTimestamp(Storage::lastModified($file));
             
-            // Delete if older than 30 minutes
-            if ($now->diffInMinutes($lastModified) > 30) {
+            // Delete if older than 2 minutes
+            if ($now->diffInMinutes($lastModified) >= 2) {
                 Storage::delete($file);
                 $count++;
             }

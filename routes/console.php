@@ -8,4 +8,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 use Illuminate\Support\Facades\Schedule;
-Schedule::command('tts:clean')->everyThirtyMinutes();
+Schedule::command('tts:clean')->everyMinute();
