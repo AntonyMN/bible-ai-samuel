@@ -22,6 +22,7 @@ const newMessage = ref('');
 const isTyping = ref(false);
 const showUserDropdown = ref(false);
 const selectedModel = ref(props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b');
+const chatContainer = ref(null);
 
 // TTS State
 const audioPlayer = ref(null);
@@ -179,7 +180,7 @@ const readOutLoud = (text, index) => {
     currentlySpeakingMessageIndex.value = index;
     const cleanText = sanitizeForTts(text);
     
-    axios.post(route('api.tts'), { text: cleanText })
+    axios.post('https://api.chatwithsamuel.org/tts', { text: cleanText })
         .then(response => {
             const url = response.data.url;
             audioPlayer.value = new Audio(url);
