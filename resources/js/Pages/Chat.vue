@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useForm, Link, Head } from '@inertiajs/vue3';
 import { marked } from 'marked';
+import Swal from 'sweetalert2';
 
 const vFocus = {
     mounted: (el) => el.focus()
@@ -207,7 +208,13 @@ const readOutLoud = (text, index) => {
             isSpeaking.value = false;
             isPaused.value = false;
             currentlySpeakingMessageIndex.value = -1;
-            alert('Samuel encountered trouble speaking. Please try again.');
+            Swal.fire({
+                title: 'Grace and Peace',
+                text: 'Samuel encountered trouble speaking just now. Please try again in a moment.',
+                icon: 'error',
+                confirmButtonColor: '#7e22ce', // purple-700
+                background: '#fafaf9', // stone-50
+            });
         });
 };
 
