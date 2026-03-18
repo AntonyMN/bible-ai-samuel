@@ -13,23 +13,24 @@ class CleanTtsFiles extends Command
 
     public function handle()
     {
-        $directory = 'public/tts';
+        $disk = Storage::disk('public');
+        $directory = 'tts';
         
-        if (!Storage::exists($directory)) {
-            $this->info("Directory {$directory} does not exist.");
+        if (!$disk->exists($directory)) {
+            $this->info("Directory {$directory} on public disk does not exist.");
             return;
         }
 
-        $files = Storage::files($directory);
+        $files = $disk->files($directory);
         $now = Carbon::now();
         $count = 0;
 
         foreach ($files as $file) {
-            $lastModified = Carbon::createFromTimestamp(Storage::lastModified($file));
+            $lastModified = Carbon::createFromTimestamp($disk->lastModified($file));
             
             // Delete if older than 2 minutes
             if ($now->diffInMinutes($lastModified) >= 2) {
-                Storage::delete($file);
+                $disk->delete($file);
                 $count++;
             }
         }
