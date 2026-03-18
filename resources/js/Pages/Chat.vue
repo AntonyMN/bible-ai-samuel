@@ -516,6 +516,15 @@ onMounted(() => {
                     <i class="fas fa-volume-up text-xs text-purple-700"></i>
                     <span class="text-xs font-bold text-stone-600 group-hover:text-purple-800">Voice Settings</span>
                 </button>
+                <a 
+                    href="https://ko-fi.com/Y8Y21W7RKD" 
+                    target="_blank" 
+                    class="hidden sm:flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
+                    title="Support Samuel"
+                >
+                    <i class="fas fa-coffee text-xs text-pink-600 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-bold text-pink-700">Support</span>
+                </a>
                 <div v-if="auth.user" class="relative">
                     <button 
                         @click="showUserDropdown = !showUserDropdown"

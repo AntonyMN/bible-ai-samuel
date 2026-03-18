@@ -30,6 +30,10 @@ onMounted(() => {
                 <a href="#about" class="hover:text-purple-700 transition">About Samuel</a>
                 <a href="#features" class="hover:text-purple-700 transition">Features</a>
                 <a href="#versions" class="hover:text-purple-700 transition">Versions</a>
+                <a href="https://ko-fi.com/Y8Y21W7RKD" target="_blank" class="flex items-center space-x-2 bg-pink-600 text-white px-5 py-2 rounded-full hover:bg-pink-700 transition shadow-md font-bold text-sm tracking-wide">
+                    <i class="fas fa-coffee"></i>
+                    <span>Support</span>
+                </a>
                 <a href="https://chat.chatwithsamuel.org" class="bg-purple-700 text-white px-6 py-2 rounded-full hover:bg-purple-800 transition shadow-md hover:shadow-lg">Start Chatting</a>
             </div>
         </nav>
