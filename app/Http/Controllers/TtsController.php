@@ -33,17 +33,18 @@ class TtsController extends Controller
         // Clean text for caching (strip markdown, etc. to ensure same text = same file)
         $cleanText = strip_tags($text);
         $filename = sha1($cleanText) . '.wav';
-        $relativeDir = 'public/tts';
-        $relativeFilepath = $relativeDir . '/' . $filename;
-        $absoluteFilepath = storage_path('app/' . $relativeFilepath);
+        $disk = Storage::disk('public');
+        $directory = 'tts';
+        $relativeFilepath = $directory . '/' . $filename;
+        $absoluteFilepath = storage_path('app/public/' . $relativeFilepath);
 
         // Ensure directory exists
-        if (!Storage::exists($relativeDir)) {
-            Storage::makeDirectory($relativeDir);
+        if (!$disk->exists($directory)) {
+            $disk->makeDirectory($directory);
         }
 
         // Check cache
-        if (!Storage::exists($relativeFilepath)) {
+        if (!$disk->exists($relativeFilepath)) {
             $success = $this->tts->generate($text, $absoluteFilepath);
             
             if (!$success) {
