@@ -54,7 +54,7 @@ class TtsController extends Controller
 
         // Return the public URL
         // Ensure you have run 'php artisan storage:link'
-        $url = asset('storage/tts/' . $filename);
+        $url = url('storage/tts/' . $filename);
 
         return response()->json([
             'url' => $url,
