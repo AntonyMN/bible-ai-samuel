@@ -13,8 +13,8 @@ class TtsService
 
     public function __construct()
     {
-        $this->piperPath = storage_path('app/piper/piper/piper');
-        $this->modelPath = storage_path('app/piper/en_US-hfc_male-medium.onnx');
+        $this->piperPath = '/home/anto/piper/piper/piper';
+        $this->modelPath = '/home/anto/piper/en_US-hfc_male-medium.onnx';
     }
 
     /**
