@@ -36,6 +36,22 @@ class _ChatScreenState extends State<ChatScreen> {
   /// This has to happen only once per app
   void _initSpeech() async {
     _speechEnabled = await _speechToText.initialize();
+    
+    // Configure AudioPlayer for Android
+    await _audioPlayer.setAudioContext(AudioContext(
+      android: AudioContextAndroid(
+        usageType: AndroidUsageType.assistanceSonification,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+      ),
+    ));
+
+    _audioPlayer.onLog.listen((log) {
+      print('DEBUG: AudioPlayer Log: $log');
+    });
+
     setState(() {});
   }
 
@@ -106,26 +122,50 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite, color: Colors.pink),
-            tooltip: 'Keep Samuel Online',
-            onPressed: () async {
-              final url = Uri.parse('https://ko-fi.com/Y8Y21W7RKD');
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'keep_online') {
+                final url = Uri.parse('https://ko-fi.com/Y8Y21W7RKD');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              } else if (value == 'login') {
+                Navigator.pushNamed(context, '/auth');
+              } else if (value == 'logout') {
+                authProvider.logout();
               }
             },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'keep_online',
+                child: ListTile(
+                  leading: Icon(Icons.favorite, color: Colors.pink),
+                  title: Text('Keep Samuel Online'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuDivider(),
+              if (!authProvider.isAuthenticated)
+                const PopupMenuItem<String>(
+                  value: 'login',
+                  child: ListTile(
+                    leading: Icon(Icons.login),
+                    title: Text('Login'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                )
+              else
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: ListTile(
+                    leading: Icon(Icons.logout),
+                    title: Text('Logout'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+            ],
           ),
-          if (!authProvider.isAuthenticated)
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, '/auth'),
-              child: const Text('Login'),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => authProvider.logout(),
-            ),
         ],
         backgroundColor: Colors.purple[50],
         elevation: 0,
@@ -248,10 +288,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final apiService = Provider.of<ApiService>(context, listen: false);
+      print('DEBUG: Requesting TTS URL for text: ${text.substring(0, text.length > 20 ? 20 : text.length)}...');
       final url = await apiService.getTtsUrl(text);
       if (url != null) {
+        print('DEBUG: Received TTS URL: $url');
         await _audioPlayer.play(UrlSource(url));
+        print('DEBUG: AudioPlayer called play');
         _audioPlayer.onPlayerComplete.listen((event) {
+          print('DEBUG: AudioPlayer completed');
           if (mounted) {
             setState(() {
               _isSpeaking = false;
@@ -270,8 +314,13 @@ class _ChatScreenState extends State<ChatScreen> {
           });
         }
       }
-    } catch (e) {
+    } catch (e, stack) {
+      print('DEBUG: Critical Error in _playTts: $e');
+      print('DEBUG: Stack: $stack');
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Heart of Harmony: Samuel encountered trouble speaking ($e)')),
+        );
         setState(() {
           _isSpeaking = false;
           _speakingIndex = null;

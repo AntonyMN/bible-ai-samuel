@@ -26,7 +26,7 @@ onMounted(() => {
                 </div>
                 <span class="text-2xl font-bold tracking-tight text-stone-800 font-['Gentium_Book_Plus']">Samuel</span>
             </div>
-            <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-stone-600">
+            <div class="flex items-center space-x-4 md:space-x-8 text-sm font-medium text-stone-600">
                 <a href="#about" class="hover:text-purple-700 transition">About Samuel</a>
                 <a href="#features" class="hover:text-purple-700 transition">Features</a>
                 <a href="#versions" class="hover:text-purple-700 transition">Versions</a>

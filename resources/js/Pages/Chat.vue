@@ -444,7 +444,7 @@ onMounted(() => {
                 <a 
                     href="https://ko-fi.com/Y8Y21W7RKD" 
                     target="_blank" 
-                    class="hidden sm:flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
+                    class="flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
                     title="Keep Samuel Online"
                 >
                     <i class="fas fa-heart text-xs text-pink-600 group-hover:scale-110 transition-transform"></i>
