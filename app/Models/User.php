@@ -31,6 +31,8 @@ class User extends Authenticatable
         'tts_language',
         'tts_rate',
         'is_admin',
+        'is_donor',
+        'donor_thanked_at',
     ];
 
     /**
@@ -54,6 +56,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'is_donor' => 'boolean',
+            'donor_thanked_at' => 'datetime',
         ];
     }
 

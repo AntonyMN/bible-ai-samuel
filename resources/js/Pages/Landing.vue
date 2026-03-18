@@ -31,8 +31,8 @@ onMounted(() => {
                 <a href="#features" class="hover:text-purple-700 transition">Features</a>
                 <a href="#versions" class="hover:text-purple-700 transition">Versions</a>
                 <a href="https://ko-fi.com/Y8Y21W7RKD" target="_blank" class="flex items-center space-x-2 bg-pink-600 text-white px-5 py-2 rounded-full hover:bg-pink-700 transition shadow-md font-bold text-sm tracking-wide">
-                    <i class="fas fa-coffee"></i>
-                    <span>Support</span>
+                    <i class="fas fa-heart"></i>
+                    <span>Keep Samuel Online</span>
                 </a>
                 <a href="https://chat.chatwithsamuel.org" class="bg-purple-700 text-white px-6 py-2 rounded-full hover:bg-purple-800 transition shadow-md hover:shadow-lg">Start Chatting</a>
             </div>
@@ -67,8 +67,9 @@ onMounted(() => {
                     <a href="https://chat.chatwithsamuel.org" class="w-full sm:w-auto px-10 py-5 bg-purple-700 text-white rounded-full text-lg font-bold hover:bg-purple-800 transition-all shadow-xl hover:shadow-purple-700/20 transform hover:-translate-y-1">
                         Begin Your Journey
                     </a>
-                    <a href="#about" class="w-full sm:w-auto px-10 py-5 bg-white text-stone-700 border border-stone-200 rounded-full text-lg font-bold hover:bg-stone-50 transition-all shadow-sm">
-                        Learn More
+                    <a href="/download/samuel-ai.apk" class="w-full sm:w-auto px-10 py-5 bg-stone-900 text-white rounded-full text-lg font-bold hover:bg-black transition-all shadow-xl transform hover:-translate-y-1 flex items-center justify-center space-x-2">
+                        <i class="fab fa-android text-2xl"></i>
+                        <span>Download Android</span>
                     </a>
                 </div>
             </div>
@@ -79,12 +80,15 @@ onMounted(() => {
                     <div class="bg-stone-900 rounded-[32px] overflow-hidden aspect-video relative group">
                         <div class="absolute inset-0 bg-gradient-to-t from-stone-900/80 to-transparent"></div>
                         <div class="absolute bottom-10 left-10 text-white text-left">
-                            <p class="text-stone-400 text-sm uppercase tracking-widest mb-2">Interface Preview</p>
-                            <h3 class="text-2xl font-bold font-['Gentium_Book_Plus']">Glassmorphism Sanctified</h3>
+                            <p class="text-stone-400 text-sm uppercase tracking-widest mb-2">Modern Experience</p>
+                            <h3 class="text-2xl font-bold font-['Gentium_Book_Plus']">Reverent Design & Glassmorphism</h3>
                         </div>
                         <!-- Mockup Inner (Simplified representation) -->
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <i class="fas fa-play-circle text-8xl text-stone-100/20 group-hover:scale-110 transition-transform cursor-pointer"></i>
+                        <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
+                             <img src="/images/samuel_persona.png" class="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" alt="Samuel Persona" />
+                             <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-play-circle text-8xl text-stone-100/40 group-hover:scale-110 transition-transform cursor-pointer"></i>
+                             </div>
                         </div>
                     </div>
                 </div>
@@ -118,10 +122,8 @@ onMounted(() => {
                     </div>
                     <div class="relative">
                         <div class="aspect-square bg-purple-50 rounded-[60px] transform rotate-3 absolute inset-0 -z-10"></div>
-                        <div class="aspect-square bg-stone-100 rounded-[60px] overflow-hidden border border-stone-200">
-                             <div class="w-full h-full flex items-center justify-center">
-                                <i class="fas fa-peace text-[120px] text-stone-300"></i>
-                             </div>
+                        <div class="aspect-square bg-stone-100 rounded-[60px] overflow-hidden border border-stone-200 shadow-inner">
+                             <img src="/images/samuel_persona.png" class="w-full h-full object-cover" alt="Samuel" />
                         </div>
                     </div>
                 </div>

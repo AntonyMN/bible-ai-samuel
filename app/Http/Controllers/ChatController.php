@@ -131,6 +131,13 @@ class ChatController extends Controller
         Context:
         {$context}";
 
+        // 3b. Donor Recognition
+        $isNewDonor = false;
+        if (Auth::check() && Auth::user()->is_donor && !Auth::user()->donor_thanked_at) {
+            $isNewDonor = true;
+            $systemPrompt .= "\n\nIMPORTANT: This user has recently donated to support your ministry! You MUST start your response by expressing heartfelt, humble, and brotherly gratitude for their support in keeping you online, before answering their biblical question.";
+        }
+
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
         ];
@@ -178,6 +185,10 @@ class ChatController extends Controller
             \Illuminate\Support\Facades\Log::error("Ollama Chat failed: " . $e->getMessage());
             // Circuit breaker has been cleared, but if it fails again, we use the fallback
             $aiContent = $fallbackResponse;
+        }
+
+        if ($isNewDonor) {
+            Auth::user()->update(['donor_thanked_at' => now()]);
         }
 
         // 5. Systematic Footnotes

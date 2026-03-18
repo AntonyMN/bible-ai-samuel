@@ -21,7 +21,5 @@
     </head>
     <body class="font-sans antialiased selection:bg-purple-100 selection:text-purple-900">
         @inertia
-        <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
-        <script type='text/javascript'>kofiwidget2.init('Keep Samuel Online', '#7E23CE', 'Y8Y21W7RKD');kofiwidget2.draw();</script>
     </body>
 </html>

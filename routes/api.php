@@ -114,4 +114,10 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             return response()->json(['message' => 'Logged out']);
         });
     });
+
+    // Ko-fi Webhook
+    Route::post('/webhooks/kofi', [\App\Http\Controllers\KofiWebhookController::class, 'handle']);
+
+    // TTS
+    Route::post('/tts', [\App\Http\Controllers\TtsController::class, 'generate']);
 });

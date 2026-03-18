@@ -118,17 +118,21 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> getConversations() async {
-    if (_token == null) return [];
+  Future<String?> getTtsUrl(String text) async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/conversations'), headers: _headers);
+      final response = await http.post(
+        Uri.parse('$baseUrl/tts'),
+        headers: _headers,
+        body: jsonEncode({'text': text}),
+      );
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final data = jsonDecode(response.body);
+        return data['url'];
       }
     } catch (e) {
-      // Ignore
+      print('DEBUG: TTS Error: $e');
     }
-    return [];
+    return null;
   }
 
   bool get isAuthenticated => _token != null;

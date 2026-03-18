@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, Head } from '@inertiajs/vue3';
 import { marked } from 'marked';
 
 const vFocus = {
@@ -24,23 +24,14 @@ const showUserDropdown = ref(false);
 const selectedModel = ref(props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b');
 
 // TTS State
-const voices = ref([]);
-const selectedVoice = ref(null);
-const ttsLanguage = ref(props.userPreferences?.tts_language || 'en-US');
-const ttsRate = ref(props.userPreferences?.tts_rate || 1.0);
-const showTtsModal = ref(false);
+const audioPlayer = ref(null);
 const isSpeaking = ref(false);
 const isPaused = ref(false);
-const chatContainer = ref(null);
+const currentlySpeakingMessageIndex = ref(-1);
 const selectedBibleVersion = ref(props.userPreferences?.bible_version || 'BSB');
 
 // TTS Search & Highlighting
-const langSearchQuery = ref('');
-const voiceSearchQuery = ref('');
-const showLangDropdown = ref(false);
-const showVoiceDropdown = ref(false);
 const currentHighlightIndex = ref(-1);
-const currentlySpeakingMessageIndex = ref(-1);
 
 // Auth Modal state
 const showAuthModal = ref(false);
@@ -62,35 +53,12 @@ const sortedSidebarConversations = computed(() => {
     });
 });
 
-const filteredVoices = computed(() => {
-    let list = voices.value.filter(v => v.lang.startsWith(ttsLanguage.value.split('-')[0]));
-    if (voiceSearchQuery.value) {
-        list = list.filter(v => v.name.toLowerCase().includes(voiceSearchQuery.value.toLowerCase()));
+const pageTitle = computed(() => {
+    if (activeConversationId.value) {
+        const conv = sidebarConversations.value.find(c => c.id === activeConversationId.value);
+        return conv ? `Samuel - ${conv.title}` : 'Samuel - Chat';
     }
-    return list;
-});
-
-const filteredLanguages = computed(() => {
-    const langs = [
-        { code: 'en-US', name: 'English (US)' },
-        { code: 'en-GB', name: 'English (GB)' },
-        { code: 'es-ES', name: 'Spanish' },
-        { code: 'fr-FR', name: 'French' },
-        { code: 'de-DE', name: 'German' },
-        { code: 'it-IT', name: 'Italian' },
-    ];
-    if (!langSearchQuery.value) return langs;
-    return langs.filter(l => l.name.toLowerCase().includes(langSearchQuery.value.toLowerCase()));
-});
-
-watch(ttsLanguage, (newLang) => {
-    if (filteredVoices.value.length > 0) {
-        // Only change if current voice is not in the new language or if strictly requested
-        const currentVoice = voices.value.find(v => v.name === selectedVoice.value);
-        if (!currentVoice || !currentVoice.lang.startsWith(newLang.split('-')[0])) {
-            selectedVoice.value = filteredVoices.value[0].name;
-        }
-    }
+    return 'Samuel - Chat';
 });
 
 const sendMessage = () => {
@@ -190,92 +158,66 @@ const sanitizeForTts = (text) => {
 };
 
 const readOutLoud = (text, index) => {
-    if (!window.speechSynthesis) return;
-    
     if (isSpeaking.value && !isPaused.value && currentlySpeakingMessageIndex.value === index) {
-        window.speechSynthesis.pause();
+        if (audioPlayer.value) audioPlayer.value.pause();
         isPaused.value = true;
         return;
     }
     
     if (isPaused.value && currentlySpeakingMessageIndex.value === index) {
-        window.speechSynthesis.resume();
+        if (audioPlayer.value) audioPlayer.value.play();
         isPaused.value = false;
         return;
     }
     
-    window.speechSynthesis.cancel();
-    currentlySpeakingMessageIndex.value = index;
-    currentHighlightIndex.value = -1;
-    
-    const cleanText = sanitizeForTts(text);
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    
-    if (selectedVoice.value) {
-        const voice = voices.value.find(v => v.name === selectedVoice.value);
-        if (voice) utterance.voice = voice;
+    // Stop previous
+    if (audioPlayer.value) {
+        audioPlayer.value.pause();
+        audioPlayer.value = null;
     }
-    utterance.lang = ttsLanguage.value;
-    utterance.rate = ttsRate.value;
-    
-    utterance.onstart = () => { isSpeaking.value = true; isPaused.value = false; };
-    utterance.onend = () => { 
-        isSpeaking.value = false; 
-        isPaused.value = false; 
-        currentlySpeakingMessageIndex.value = -1;
-        currentHighlightIndex.value = -1;
-    };
-    
-    utterance.onboundary = (event) => {
-        if (event.name === 'word') {
-            currentHighlightIndex.value = event.charIndex;
-        }
-    };
 
-    utterance.onerror = (event) => {
-        console.error('TTS Error:', event);
-        isSpeaking.value = false;
-        isPaused.value = false;
-        currentlySpeakingMessageIndex.value = -1;
-        currentHighlightIndex.value = -1;
-        alert('Samuel encountered a trouble speaking: ' + event.error);
-    };
+    currentlySpeakingMessageIndex.value = index;
+    const cleanText = sanitizeForTts(text);
     
-    window.speechSynthesis.speak(utterance);
+    axios.post(route('api.tts'), { text: cleanText })
+        .then(response => {
+            const url = response.data.url;
+            audioPlayer.value = new Audio(url);
+            
+            audioPlayer.value.onplay = () => {
+                isSpeaking.value = true;
+                isPaused.value = false;
+            };
+            
+            audioPlayer.value.onpause = () => {
+                isPaused.value = true;
+            };
+            
+            audioPlayer.value.onended = () => {
+                isSpeaking.value = false;
+                isPaused.value = false;
+                currentlySpeakingMessageIndex.value = -1;
+            };
+            
+            audioPlayer.value.play();
+        })
+        .catch(error => {
+            console.error('TTS Error:', error);
+            isSpeaking.value = false;
+            isPaused.value = false;
+            currentlySpeakingMessageIndex.value = -1;
+            alert('Samuel encountered trouble speaking. Please try again.');
+        });
 };
 
 const stopSpeech = () => {
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        isSpeaking.value = false;
-        isPaused.value = false;
-        currentlySpeakingMessageIndex.value = -1;
-        currentHighlightIndex.value = -1;
+    if (audioPlayer.value) {
+        audioPlayer.value.pause();
+        audioPlayer.value = null;
     }
-};
-
-const getWordsWithOffsets = (text) => {
-    const clean = sanitizeForTts(text);
-    const words = [];
-    const rawWords = clean.split(/\s+/);
-    let currentPos = 0;
-    
-    for (const w of rawWords) {
-        const start = clean.indexOf(w, currentPos);
-        words.push({ word: w, start, end: start + w.length });
-        currentPos = start + w.length;
-    }
-    return words;
-};
-const updateTtsSettings = () => {
-    if (props.auth.user) {
-        axios.post(route('user.tts-settings'), {
-            tts_voice: selectedVoice.value,
-            tts_language: ttsLanguage.value,
-            tts_rate: ttsRate.value,
-        });
-    }
-    showTtsModal.value = false;
+    isSpeaking.value = false;
+    isPaused.value = false;
+    currentlySpeakingMessageIndex.value = -1;
 };
 
 const updateBibleVersionPreference = () => {
@@ -388,23 +330,6 @@ onMounted(() => {
             }
         });
 
-    // Initialize TTS voices
-    const loadVoices = () => {
-        voices.value = window.speechSynthesis.getVoices();
-        if (props.userPreferences?.tts_voice) {
-            selectedVoice.value = props.userPreferences.tts_voice;
-        } else if (voices.value.length > 0) {
-            // Pick a default voice that matches language if possible
-            const defaultVoice = voices.value.find(v => v.lang.startsWith(ttsLanguage.value.split('-')[0])) || voices.value[0];
-            selectedVoice.value = defaultVoice.name;
-        }
-    };
-    
-    loadVoices();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
     // Check for pending history/message to continue
     const pendingMsg = sessionStorage.getItem('pending_chat_message');
     const pendingHistory = sessionStorage.getItem('pending_chat_history');
@@ -422,6 +347,7 @@ onMounted(() => {
 </script>
 
 <template>
+    <Head :title="pageTitle" />
     <div class="flex h-screen bg-stone-50 overflow-hidden">
         <aside v-if="auth.user" class="hidden md:flex flex-col w-64 bg-stone-100 border-r border-stone-200 shadow-inner">
             <div class="p-4 border-b border-stone-200 bg-white/50">
@@ -507,23 +433,14 @@ onMounted(() => {
                     </select>
                 </div>
 
-                <!-- Voice Settings Discovery Button -->
-                <button 
-                    @click="showTtsModal = true" 
-                    class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:bg-purple-50 hover:border-purple-300 transition-all group h-10 shadow-sm"
-                    title="Sanctuary Voice Settings"
-                >
-                    <i class="fas fa-volume-up text-xs text-purple-700"></i>
-                    <span class="text-xs font-bold text-stone-600 group-hover:text-purple-800">Voice Settings</span>
-                </button>
                 <a 
                     href="https://ko-fi.com/Y8Y21W7RKD" 
                     target="_blank" 
                     class="hidden sm:flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
-                    title="Support Samuel"
+                    title="Keep Samuel Online"
                 >
-                    <i class="fas fa-coffee text-xs text-pink-600 group-hover:scale-110 transition-transform"></i>
-                    <span class="text-xs font-bold text-pink-700">Support</span>
+                    <i class="fas fa-heart text-xs text-pink-600 group-hover:scale-110 transition-transform"></i>
+                    <span class="text-xs font-bold text-pink-700">Keep Samuel Online</span>
                 </a>
                 <div v-if="auth.user" class="relative">
                     <button 
@@ -605,25 +522,6 @@ onMounted(() => {
                     <div v-if="msg.role === 'assistant'" class="markdown-content text-base leading-relaxed relative">
                         <div v-html="parseMarkdown(msg.content)"></div>
                         
-                        <!-- Highlighting Overlay while speaking -->
-                        <div v-if="isSpeaking && currentlySpeakingMessageIndex === index" class="absolute inset-x-0 top-0 bg-white z-10 p-1 rounded-lg border border-purple-100 shadow-sm animate-in fade-in transition-all">
-                             <div class="text-[10px] text-purple-700 font-bold uppercase tracking-widest mb-2 flex justify-between">
-                                <span>Reading Now...</span>
-                                <button @click="stopSpeech" class="hover:text-red-500 transition"><i class="fas fa-times"></i></button>
-                             </div>
-                             <div class="text-base leading-relaxed text-stone-700">
-                                <template v-for="(wordObj, wIdx) in getWordsWithOffsets(msg.content)" :key="wIdx">
-                                    <span 
-                                        :class="['transition-colors duration-150 rounded px-0.5', 
-                                            currentHighlightIndex >= wordObj.start && currentHighlightIndex < wordObj.end ? 'bg-purple-200 text-stone-900 font-bold scale-110' : ''
-                                        ]"
-                                    >
-                                        {{ wordObj.word }}
-                                    </span>
-                                    {{ ' ' }}
-                                </template>
-                             </div>
-                        </div>
                     </div>
                     <p v-else :class="['text-lg leading-relaxed font-medium', msg.failed ? 'opacity-70' : '']">{{ msg.content }}</p>
                     
@@ -699,120 +597,6 @@ onMounted(() => {
             </div>
         </footer>
 
-        <!-- TTS Settings Modal -->
-        <div v-if="showTtsModal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4 font-['Outfit']">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-stone-100">
-                <div class="bg-purple-700 px-6 py-4 flex justify-between items-center text-white">
-                    <h3 class="text-xl font-['Gentium_Book_Plus'] font-bold italic">Sanctuary Voice Settings</h3>
-                    <button @click="showTtsModal = false" class="hover:bg-white/20 rounded-full p-1 transition">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="p-6 space-y-5">
-                    <!-- Language Selection -->
-                    <div class="relative">
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Language</label>
-                        <div 
-                            @click="showLangDropdown = !showLangDropdown"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-purple-300 shadow-sm"
-                        >
-                            <span>{{ filteredLanguages.find(l => l.code === ttsLanguage)?.name || 'Select Language' }}</span>
-                            <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showLangDropdown ? 'rotate-180' : '']"></i>
-                        </div>
-                        
-                        <div v-if="showLangDropdown" class="absolute z-10 w-full mt-2 bg-white border border-stone-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <div class="p-2 border-b border-stone-50">
-                                <input 
-                                    v-model="langSearchQuery" 
-                                    type="text" 
-                                    placeholder="Search languages..."
-                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-purple-700 outline-none"
-                                >
-                            </div>
-                            <div class="max-h-48 overflow-y-auto">
-                                <div 
-                                    v-for="lang in filteredLanguages" 
-                                    :key="lang.code"
-                                    @click="ttsLanguage = lang.code; showLangDropdown = false"
-                                    class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
-                                >
-                                    <span>{{ lang.name }}</span>
-                                    <i v-if="ttsLanguage === lang.code" class="fas fa-check text-xs text-purple-700"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Reader Selection -->
-                    <div class="relative">
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Reader (Voice)</label>
-                        <div 
-                            @click="showVoiceDropdown = !showVoiceDropdown"
-                            class="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 text-stone-700 cursor-pointer flex justify-between items-center transition hover:border-purple-300 shadow-sm"
-                        >
-                            <span class="truncate">{{ selectedVoice || 'Select Voice' }}</span>
-                            <i :class="['fas fa-chevron-down text-xs text-stone-400 transition-transform duration-300', showVoiceDropdown ? 'rotate-180' : '']"></i>
-                        </div>
-                        
-                        <div v-if="showVoiceDropdown" class="absolute z-10 w-full mt-2 bg-white border border-stone-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2">
-                            <div class="p-2 border-b border-stone-50">
-                                <input 
-                                    v-model="voiceSearchQuery" 
-                                    type="text" 
-                                    placeholder="Search reader name..."
-                                    class="w-full bg-stone-50 border border-stone-100 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-purple-700 outline-none"
-                                >
-                            </div>
-                            <div class="max-h-48 overflow-y-auto">
-                                <div 
-                                    v-for="v in filteredVoices" 
-                                    :key="v.name"
-                                    @click="selectedVoice = v.name; showVoiceDropdown = false"
-                                    class="px-4 py-3 text-sm text-stone-600 hover:bg-amber-50 hover:text-amber-700 cursor-pointer transition flex items-center justify-between"
-                                >
-                                    <span class="truncate">{{ v.name }}</span>
-                                    <i v-if="selectedVoice === v.name" class="fas fa-check text-xs text-purple-700"></i>
-                                </div>
-                                <div v-if="filteredVoices.length === 0" class="px-4 py-6 text-center text-xs text-stone-400 italic">
-                                    No readers found for this search.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Speed Level -->
-                    <div>
-                        <label class="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 flex justify-between">
-                            <span>Narration Speed</span>
-                            <span class="text-purple-700 font-mono">{{ ttsRate }}x</span>
-                        </label>
-                        <input 
-                            type="range" 
-                            v-model="ttsRate" 
-                            min="0.5" 
-                            max="2.0" 
-                            step="0.1"
-                            class="w-full accent-purple-700 h-1.5 bg-stone-100 rounded-lg appearance-none cursor-pointer"
-                        >
-                        <div class="flex justify-between text-[10px] text-stone-400 mt-1">
-                            <span>Slow</span>
-                            <span>Normal</span>
-                            <span>Fast</span>
-                        </div>
-                    </div>
-
-                    <div class="pt-2">
-                        <button 
-                            @click="updateTtsSettings" 
-                            class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition shadow-lg transform active:scale-[0.98]"
-                        >
-                            Save Preferences
-                        </button>
-                    </div>
-                    <p class="text-[10px] text-center text-stone-400 italic">"Settings are saved to your profile for future visits"</p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Authentication Modal (Glassmorphism) -->
