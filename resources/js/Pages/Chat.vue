@@ -22,7 +22,8 @@ const activeConversationId = ref(null);
 const newMessage = ref('');
 const isTyping = ref(false);
 const showUserDropdown = ref(false);
-const selectedModel = ref(props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b');
+const showMobileMenu = ref(false);
+const selectedModel = ref(props.userPreferences?.preferred_model || (props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b'));
 const chatContainer = ref(null);
 
 // TTS State
@@ -232,6 +233,14 @@ const updateBibleVersionPreference = () => {
     if (props.auth.user) {
         axios.post(route('user.bible-version'), {
             bible_version: selectedBibleVersion.value,
+        }).catch(error => {
+            console.error('Bible Version Update Error:', error);
+            Swal.fire({
+                title: 'Grace and Peace',
+                text: 'Samuel encountered trouble updating your Bible preference. Please try again.',
+                icon: 'error',
+                confirmButtonColor: '#7e22ce',
+            });
         });
     }
 };
@@ -240,13 +249,35 @@ watch(selectedBibleVersion, () => {
     updateBibleVersionPreference();
 });
 
+const updateModelPreference = () => {
+    if (props.auth.user) {
+        axios.post(route('user.model'), {
+            model: selectedModel.value,
+        }).catch(error => {
+            console.error('Model Update Error:', error);
+            Swal.fire({
+                title: 'Grace and Peace',
+                text: 'Samuel encountered trouble updating your AI agent preference. Please try again.',
+                icon: 'error',
+                confirmButtonColor: '#7e22ce',
+            });
+        });
+    }
+};
+
+watch(selectedModel, () => {
+    updateModelPreference();
+});
+
 const startNewChat = () => {
     activeConversationId.value = null;
     messages.value = [];
+    showMobileMenu.value = false;
 };
 
 const loadConversation = (id) => {
     activeConversationId.value = id;
+    showMobileMenu.value = false;
     axios.get(route('chat.show', id)).then(response => {
         messages.value = response.data.messages;
     });
@@ -356,6 +387,48 @@ onMounted(() => {
 
 <template>
     <Head :title="pageTitle" />
+    
+    <!-- Mobile Sidebar Drawer -->
+    <div v-if="showMobileMenu" class="fixed inset-0 z-[100] md:hidden">
+        <!-- Backdrop -->
+        <div @click="showMobileMenu = false" class="absolute inset-0 bg-stone-900/40 backdrop-blur-sm transition-opacity"></div>
+        
+        <!-- Sidebar Content -->
+        <aside class="absolute inset-y-0 left-0 w-72 bg-stone-100 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out">
+            <div class="p-4 border-b border-stone-200 bg-white flex justify-between items-center">
+                <h2 class="font-bold text-stone-800">Conversations</h2>
+                <button @click="showMobileMenu = false" class="p-2 text-stone-400 hover:text-stone-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-4 bg-white/50">
+                <button 
+                    class="w-full py-3 bg-purple-700 text-white rounded-xl text-sm font-bold hover:bg-purple-800 transition shadow-md"
+                    @click="startNewChat"
+                >
+                    + New Conversation
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-3 space-y-2">
+                <div 
+                    v-for="conv in sortedSidebarConversations" 
+                    :key="conv.id"
+                    :class="['p-4 rounded-xl text-sm cursor-pointer transition flex flex-col', activeConversationId === conv.id ? 'bg-white border border-stone-200 shadow-sm ring-1 ring-purple-100' : 'hover:bg-stone-200 text-stone-600']"
+                    @click="loadConversation(conv.id)"
+                >
+                    <span class="font-bold truncate">{{ conv.title }}</span>
+                    <span class="text-[10px] text-stone-400 mt-1 uppercase tracking-wider">{{ new Date(conv.updated_at).toLocaleDateString() }}</span>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-stone-200 bg-stone-50 text-center">
+                <p class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Peace be with you</p>
+            </div>
+        </aside>
+    </div>
+
     <div class="flex h-screen bg-stone-50 overflow-hidden">
         <aside v-if="auth.user" class="hidden md:flex flex-col w-64 bg-stone-100 border-r border-stone-200 shadow-inner">
             <div class="p-4 border-b border-stone-200 bg-white/50">
@@ -404,7 +477,15 @@ onMounted(() => {
             <!-- Header -->
             <header class="bg-white border-b border-stone-200 p-4 shadow-sm flex justify-between items-center bg-gradient-to-r from-purple-50 to-white font-['Outfit']">
             <div class="flex items-center space-x-2">
-                <div class="w-12 h-12 rounded-full overflow-hidden shadow-lg transform hover:rotate-12 transition-transform duration-300">
+                <!-- Hamburger Menu for Mobile -->
+                <button 
+                    v-if="auth.user"
+                    @click="showMobileMenu = true"
+                    class="md:hidden p-2 -ml-2 text-stone-600 hover:text-purple-700 transition"
+                >
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden shadow-lg transform hover:rotate-12 transition-transform duration-300">
                     <img src="/images/logo.png" alt="Samuel Logo" class="w-full h-full object-cover">
                 </div>
                 <div>
@@ -501,6 +582,33 @@ onMounted(() => {
                 </div>
             </div>
         </header>
+
+        <!-- Mobile Selectors Bar -->
+        <div class="sm:hidden flex items-center justify-between p-3 bg-white border-b border-stone-100 px-4 space-x-3 shadow-sm">
+            <div v-if="availableModels.length > 0" class="flex-1 flex items-center space-x-2 bg-stone-50 px-3 py-2 rounded-xl border border-stone-200">
+                <i class="fas fa-robot text-xs text-purple-700"></i>
+                <select 
+                    v-model="selectedModel" 
+                    class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 leading-tight w-full"
+                >
+                    <option v-for="model in availableModels" :key="model" :value="model">
+                        {{ model }}
+                    </option>
+                </select>
+            </div>
+            <div class="flex-1 flex items-center space-x-2 bg-stone-50 px-3 py-2 rounded-xl border border-stone-200">
+                <i class="fas fa-book-open text-xs text-purple-700"></i>
+                <select 
+                    v-model="selectedBibleVersion" 
+                    class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 leading-tight w-full"
+                >
+                    <option value="BSB">BSB</option>
+                    <option value="KJV">KJV</option>
+                    <option value="ASV">ASV</option>
+                    <option value="WEB">WEB</option>
+                </select>
+            </div>
+        </div>
 
         <!-- Chat Area -->
         <main ref="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-6 max-w-4xl mx-auto w-full bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">

@@ -62,7 +62,7 @@ class VectorizeVerses extends Command
                             'version' => $v->version,
                             'full_reference' => $v->full_reference,
                         ];
-                        $batchIds[] = (string) $v->_id;
+                        $batchIds[] = (string) $v->_id . '_' . $version;
                     }
 
                     VectorizeVerseJob::dispatch($version, $batchVerses, $batchMetadatas, $batchIds);
@@ -91,7 +91,7 @@ class VectorizeVerses extends Command
                         'version' => $v->version,
                         'full_reference' => $v->full_reference,
                     ];
-                    $batchIds[] = (string) $v->_id;
+                    $batchIds[] = (string) $v->_id . '_' . $version;
                 }
 
                 if (!empty($batchVerses)) {

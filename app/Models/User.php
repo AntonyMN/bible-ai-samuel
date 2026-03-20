@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email',
         'password',
         'bible_version', // Preferred version
+        'preferred_model', // Preferred AI model
         'tts_voice',
         'tts_language',
         'tts_rate',

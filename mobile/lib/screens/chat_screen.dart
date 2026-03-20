@@ -31,6 +31,9 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _initSpeech();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().loadConversations();
+    });
   }
 
   /// This has to happen only once per app
@@ -170,12 +173,14 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: Colors.purple[50],
         elevation: 0,
       ),
+      drawer: _buildDrawer(chatProvider),
       body: Container(
         decoration: const BoxDecoration(
           color: Color(0xFFFAFAF9),
         ),
         child: Column(
           children: [
+            _buildSettingsBar(chatProvider),
             Expanded(
               child: chatProvider.messages.isEmpty
                   ? Center(
@@ -399,5 +404,135 @@ class _ChatScreenState extends State<ChatScreen> {
     provider.sendMessage(_controller.text);
     _controller.clear();
     _scrollToBottom();
+  }
+
+  Widget _buildSettingsBar(ChatProvider provider) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: provider.selectedModel,
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) provider.selectedModel = newValue;
+                  },
+                  items: <String>['llama3.2:3b', 'llama3.1:8b', 'mistral']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.smart_toy_outlined, size: 14, color: Colors.purple),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: provider.selectedBibleVersion,
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) provider.selectedBibleVersion = newValue;
+                  },
+                  items: <String>['BSB', 'KJV', 'ASV', 'WEB']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.menu_book_outlined, size: 14, color: Colors.purple),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer(ChatProvider provider) {
+    return Drawer(
+      child: Column(
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: Colors.purple[50]),
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 48, color: Colors.purple),
+                  SizedBox(height: 8),
+                  Text('Conversations', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.add_circle_outline, color: Colors.purple),
+            title: const Text('New Conversation', style: TextStyle(fontWeight: FontWeight.bold)),
+            onTap: () {
+              provider.startNewChat();
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(),
+          Expanded(
+            child: provider.conversations.isEmpty
+                ? const Center(child: Text('No previous conversations', style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    itemCount: provider.conversations.length,
+                    itemBuilder: (context, index) {
+                      final conv = provider.conversations[index];
+                      return ListTile(
+                        title: Text(conv['title'] ?? 'Chat', maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(conv['updated_at'] != null ? DateTime.parse(conv['updated_at']).toLocal().toString().split(' ')[0] : 'Today'),
+                        selected: provider.activeConversationId == conv['id'].toString(),
+                        onTap: () {
+                          provider.selectConversation(conv['id'].toString());
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -29,16 +29,22 @@ Route::domain($domain)->group(function () {
     Route::get('/', function () {
         return Inertia::render('Landing');
     })->name('landing');
+});
 
-    require __DIR__.'/auth.php';
+// Authentication Routes (available on all domains)
+require __DIR__.'/auth.php';
 
-    Route::middleware('auth')->group(function () {
-        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-        Route::post('/user/tts-settings', [ChatController::class, 'updateTtsSettings'])->name('user.tts-settings');
-        Route::post('/user/bible-version', [ChatController::class, 'updateBibleVersion'])->name('user.bible-version');
-        Route::patch('/conversations/{id}/title', [ChatController::class, 'updateTitle'])->name('chat.update-title');
-    });
+// Common Authenticated User Routes (available on all domains)
+Route::middleware('auth')->group(function () {
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Chat Settings & Preferences
+    Route::post('/user/tts-settings', [ChatController::class, 'updateTtsSettings'])->name('user.tts-settings');
+    Route::post('/user/bible-version', [ChatController::class, 'updateBibleVersion'])->name('user.bible-version');
+    Route::post('/user/model', [ChatController::class, 'updateModel'])->name('user.model');
+    Route::patch('/conversations/{id}/title', [ChatController::class, 'updateTitle'])->name('chat.update-title');
 });
 

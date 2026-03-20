@@ -54,6 +54,7 @@ class ChatController extends Controller
             'availableModels' => $availableModels,
             'userPreferences' => Auth::check() ? [
                 'bible_version' => Auth::user()->bible_version,
+                'preferred_model' => Auth::user()->preferred_model,
                 'tts_voice' => Auth::user()->tts_voice,
                 'tts_language' => Auth::user()->tts_language,
                 'tts_rate' => Auth::user()->tts_rate ?? 1.0,
@@ -290,14 +291,40 @@ class ChatController extends Controller
             'bible_version' => 'required|string|in:BSB,KJV,ASV,WEB',
         ]);
 
-        $user = Auth::user();
-        if ($user) {
-            $user->update([
-                'bible_version' => $request->bible_version,
-            ]);
+        try {
+            $user = Auth::user();
+            if ($user) {
+                $user->update([
+                    'bible_version' => $request->bible_version,
+                ]);
+                \Illuminate\Support\Facades\Log::info("User {$user->id} updated bible version to {$request->bible_version}");
+            }
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to update bible version for user " . Auth::id() . ": " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
 
-        return response()->json(['success' => true]);
+    public function updateModel(Request $request)
+    {
+        $request->validate([
+            'model' => 'required|string',
+        ]);
+
+        try {
+            $user = Auth::user();
+            if ($user) {
+                $user->update([
+                    'preferred_model' => $request->model,
+                ]);
+                \Illuminate\Support\Facades\Log::info("User {$user->id} updated preferred model to {$request->model}");
+            }
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to update preferred model for user " . Auth::id() . ": " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     private function attachSystematicFootnotes($content, $version)

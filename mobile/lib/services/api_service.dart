@@ -89,12 +89,14 @@ class ApiService {
     await prefs.remove('auth_token');
   }
 
-  Future<Map<String, dynamic>?> sendMessage(String message, {String? conversationId, List<Message>? history}) async {
+  Future<Map<String, dynamic>?> sendMessage(String message, {String? conversationId, List<Message>? history, String? model, String? bibleVersion}) async {
     try {
       final body = jsonEncode({
         'message': message,
         'conversation_id': conversationId,
         'history': history?.map((m) => m.toJson()).toList(),
+        'model': model,
+        'bible_version': bibleVersion,
       });
       print('DEBUG: Sending message to ${Uri.parse('$baseUrl/chat/send')}');
       print('DEBUG: Body: $body');
@@ -116,6 +118,36 @@ class ApiService {
       print('DEBUG: Error sending message: $e');
       return null;
     }
+  }
+
+  Future<List<dynamic>> getConversations() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/conversations'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching conversations: $e');
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>?> getConversationDetails(String id) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/conversations/$id'),
+        headers: _headers,
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching conversation details: $e');
+    }
+    return null;
   }
 
   Future<String?> getTtsUrl(String text) async {
