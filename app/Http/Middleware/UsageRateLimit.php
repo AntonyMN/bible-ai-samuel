@@ -31,11 +31,11 @@ class UsageRateLimit
         if ($isAuth) {
             $userId = (string) Auth::id();
             $cacheKey = "rate_limit_auth_{$userId}_{$today}";
-            $limit = 10;
+            $limit = 50;
         } else {
             $ip = $request->ip();
             $cacheKey = "rate_limit_unauth_{$ip}_{$today}";
-            $limit = 5;
+            $limit = 20;
         }
 
         $currentCount = Cache::get($cacheKey, 0);
