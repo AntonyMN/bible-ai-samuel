@@ -19,13 +19,14 @@ class ChatController extends Controller
         $conversations = [];
         $messages = [];
         $availableModels = [];
-        
+
         try {
             $modelsResponse = $ollama->listModels();
             if (isset($modelsResponse['models'])) {
                 foreach ($modelsResponse['models'] as $m) {
                     // Filter out embedding models
-                    if (str_contains($m['name'], 'nomic-embed-text')) continue;
+                    if (str_contains($m['name'], 'nomic-embed-text'))
+                        continue;
                     $availableModels[] = $m['name'];
                 }
             }
@@ -38,7 +39,7 @@ class ChatController extends Controller
             $conversations = Conversation::where('user_id', (string) Auth::id())
                 ->orderBy('updated_at', 'desc')
                 ->get()
-                ->map(function($conv) {
+                ->map(function ($conv) {
                     return [
                         'id' => (string) $conv->_id,
                         'title' => $conv->title,
@@ -70,17 +71,17 @@ class ChatController extends Controller
 
         $userMessage = $request->input('message');
         $model = $request->input('model') ?? config('services.ollama.model');
-        
+
         // 1. Determine Bible Version
         $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
-        
+
         // 2. Vector Search for RAG (if available)
         $context = "";
         $citations = [];
 
         try {
             $embedding = $ollama->embed($userMessage, 'nomic-embed-text');
-            
+
             if (!empty($embedding)) {
                 $searchResults = $vectorStore->query('bible_verses', [$embedding], 5);
                 if (isset($searchResults['documents'][0])) {
@@ -102,7 +103,7 @@ class ChatController extends Controller
                 ->where('text', 'like', "%{$userMessage}%")
                 ->limit(3)
                 ->get();
-            
+
             foreach ($verses as $v) {
                 $context .= "{$v->full_reference} ({$v->version}): {$v->text}\n";
                 $citations[] = [
@@ -115,12 +116,12 @@ class ChatController extends Controller
 
         // 3. Prepare Prompt
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
-        
+
         $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian AI companion. Your purpose is to provide scriptural comfort, biblical context, and pastoral care. Address the user as '{$userName}'.
 
         You must strictly obey the following core directives:
 
-        1. CRISIS PROTOCOL (CRITICAL SAFETY): If the user expresses thoughts of suicide, self-harm, severe depression, or physical abuse, your VERY FIRST sentence MUST direct them to seek immediate professional help. You must explicitly tell them to contact a medical professional, dial their local emergency number, or call a crisis hotline (such as the global 988 lifeline, or the Niskize hotline in Kenya at 0900 620 800). Only after providing this lifeline may you offer empathetic, biblical comfort. Do not attempt to be their sole counselor in a severe crisis.
+        1. CRISIS PROTOCOL (CRITICAL SAFETY): If the user expresses thoughts of suicide, self-harm, severe depression, or physical abuse, your VERY FIRST sentence MUST direct them to seek immediate professional help. You must explicitly instruct them to contact a medical professional, dial their local emergency services, or reach out to a national crisis hotline in their specific country. Only after providing this lifeline may you offer empathetic, biblical comfort. Do not attempt to be their sole counselor in a severe crisis.
 
         2. STRICT SCRIPTURAL ACCURACY: You will be provided with specific Bible verses in the context data. You MUST ONLY quote, reference, or summarize the exact scriptures provided in that context. NEVER invent, mash up, or hallucinate Bible verses, book names, or chapter/verse numbers. If the provided context does not contain relevant scripture, honestly state: \"I don't have a specific scripture for that right now, but...\"
 
@@ -169,7 +170,7 @@ class ChatController extends Controller
         // 4. Call Ollama
         $fallbackResponse = "Peace be with you, {$userName}. I am currently reflecting on the Word. (Note: Data ingestion for the requested Bible version is currently in progress, so I am using my general wisdom for now). Please try your question again in a short while.";
         $aiContent = $fallbackResponse;
-        
+
         try {
             // If context is empty, Samuel should mention he is still learning (ingesting)
             if (empty($context)) {
@@ -177,7 +178,7 @@ class ChatController extends Controller
             }
 
             $response = $ollama->chat($messages, $model);
-            
+
             if (isset($response['message']['content'])) {
                 $aiContent = $response['message']['content'];
             } elseif (is_string($response)) {
@@ -210,14 +211,14 @@ class ChatController extends Controller
             if ($request->conversation_id) {
                 $conversation = Conversation::find($request->conversation_id);
             }
-            
+
             if (!$conversation) {
                 $conversation = Conversation::create([
                     'user_id' => Auth::id(),
                     'title' => 'New Conversation',
                     'messages' => [],
                 ]);
-                
+
                 // If history was passed (likely from guest state), save it
                 if ($request->history && is_array($request->history)) {
                     $conversation->update(['messages' => $request->history]);
@@ -246,7 +247,7 @@ class ChatController extends Controller
     public function show($id)
     {
         $conversation = Conversation::where('user_id', (string) Auth::id())->findOrFail($id);
-        
+
         // Normalize messages if needed
         return response()->json($conversation);
     }
@@ -303,7 +304,7 @@ class ChatController extends Controller
     {
         // Regex to match "Book Chapter:Verse" (e.g., "John 3:16", "1 John 1:9", "Genesis 1:1-3")
         $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)\s+(\d+):(\d+)(?:-(\d+))?/';
-        
+
         if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
             return $content;
         }
@@ -311,12 +312,12 @@ class ChatController extends Controller
         $footnotes = [];
         foreach ($matches as $match) {
             $book = $match[1];
-            $chapter = (int)$match[2];
-            $verseStart = (int)$match[3];
-            $verseEnd = isset($match[4]) ? (int)$match[4] : $verseStart;
+            $chapter = (int) $match[2];
+            $verseStart = (int) $match[3];
+            $verseEnd = isset($match[4]) ? (int) $match[4] : $verseStart;
 
             $reference = "{$book} {$chapter}:{$verseStart}" . ($verseStart != $verseEnd ? "-{$verseEnd}" : "");
-            
+
             // Query for the verse text
             // For ranges, we'll fetch all and join
             $verses = Verse::where('version', $version)
