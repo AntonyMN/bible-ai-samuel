@@ -2,83 +2,112 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\Verse;
 use App\Services\OllamaService;
 use App\Services\VectorStoreService;
+use App\Jobs\VectorizeVerseJob;
+use Illuminate\Console\Command;
 
 class VectorizeVerses extends Command
 {
-    protected $signature = 'bible:vectorize {--version=BSB : The version to vectorize} {--chunk=50 : Batch size for embeddings}';
-    protected $description = 'Vectorize existing Bible verses from MongoDB into ChromaDB';
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'bible:vectorize {--bible-version=BSB} {--chunk=100} {--queue : Dispatch to queue instead of running sequentially}';
 
-    public function handle()
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Vectorize Bible verses and store in ChromaDB';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle(OllamaService $ollama, VectorStoreService $vectorStore)
     {
-        $ollama = app(OllamaService::class);
-        $vectorStore = app(VectorStoreService::class);
+        $version = $this->option('bible-version');
+        $chunkSize = (int) $this->option('chunk');
+        $useQueue = $this->option('queue');
 
-        $version = $this->option('version');
-        $chunkSize = (int)$this->option('chunk');
-
-        $this->info("Starting vectorization for {$version}...");
+        $this->info("Fetching verses for {$version}...");
 
         $total = Verse::where('version', $version)->count();
+
+        if ($total === 0) {
+            $this->error("No verses found for version: {$version}");
+            return;
+        }
+
         $this->info("Total verses to process: {$total}");
 
-        $bar = $this->output->createProgressBar($total);
-        $bar->start();
-
-        Verse::where('version', $version)->chunk($chunkSize, function ($verses) use ($ollama, $vectorStore, $bar, $version) {
-            $batchVerses = [];
-            $batchEmbeddings = [];
-            $batchMetadatas = [];
-            $batchIds = [];
-
-            foreach ($verses as $verse) {
-                $fullReference = $verse->full_reference;
-                $text = $verse->text;
-                $content = "{$fullReference} ({$version}): {$text}";
-
-                try {
-                    $embedding = $ollama->embed($content);
-                    
-                    if (!empty($embedding)) {
-                        $batchVerses[] = $content;
-                        $batchEmbeddings[] = $embedding;
-                        $batchMetadatas[] = [
-                            'version' => $version,
-                            'book' => $verse->book,
-                            'chapter' => $verse->chapter,
-                            'verse' => $verse->verse,
-                            'reference' => $fullReference,
-                        ];
-                        $batchIds[] = "{$version}_{$verse->book}_{$verse->chapter}_{$verse->verse}";
-                    }
-                } catch (\Exception $e) {
-                    $this->error("\nError embedding {$fullReference}: " . $e->getMessage());
-                    // Circuit breaker might trigger here, we should probably wait or exit
-                    if (str_contains($e->getMessage(), 'Circuit Breaker')) {
-                        $this->warn("Circuit breaker active. Sleeping for 1 minute...");
-                        sleep(60);
-                    }
-                }
-            }
-
-            if (!empty($batchVerses)) {
-                try {
-                    $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $batchEmbeddings);
-                } catch (\Exception $e) {
-                    $this->error("\nError adding to ChromaDB: " . $e->getMessage());
-                }
-            }
-
-            $bar->advance(count($verses));
+        if ($useQueue) {
+            $this->info("Dispatching jobs to queue for {$version}...");
             
-            // Subtle sleep to prevent CPU/GPU hammering as requested
-            usleep(200000); // 200ms
-        });
+            Verse::where('version', $version)
+                ->chunk($chunkSize, function ($verses) use ($version) {
+                    $batchVerses = [];
+                    $batchMetadatas = [];
+                    $batchIds = [];
 
-        $bar->finish();
-        $this->info("\nVectorization completed!");
+                    foreach ($verses as $v) {
+                        $batchVerses[] = $v->text;
+                        $batchMetadatas[] = [
+                            'book' => $v->book,
+                            'chapter' => $v->chapter,
+                            'verse' => $v->verse,
+                            'version' => $v->version,
+                            'full_reference' => $v->full_reference,
+                        ];
+                        $batchIds[] = (string) $v->_id;
+                    }
+
+                    VectorizeVerseJob::dispatch($version, $batchVerses, $batchMetadatas, $batchIds);
+                });
+
+            $this->info("All jobs for {$version} dispatched successfully!");
+            return;
+        }
+
+        $this->info("Starting sequential vectorization for {$version}...");
+        $progressBar = $this->output->createProgressBar($total);
+        $progressBar->start();
+
+        Verse::where('version', $version)
+            ->chunk($chunkSize, function ($verses) use ($ollama, $vectorStore, $progressBar, $version) {
+                $batchVerses = [];
+                $batchMetadatas = [];
+                $batchIds = [];
+
+                foreach ($verses as $v) {
+                    $batchVerses[] = $v->text;
+                    $batchMetadatas[] = [
+                        'book' => $v->book,
+                        'chapter' => $v->chapter,
+                        'verse' => $v->verse,
+                        'version' => $v->version,
+                        'full_reference' => $v->full_reference,
+                    ];
+                    $batchIds[] = (string) $v->_id;
+                }
+
+                if (!empty($batchVerses)) {
+                    try {
+                        $embeddings = $ollama->getEmbeddings($batchVerses);
+                        if ($embeddings) {
+                            $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $embeddings);
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("\nError adding to ChromaDB: " . $e->getMessage());
+                    }
+                    $progressBar->advance(count($batchVerses));
+                }
+            });
+
+        $progressBar->finish();
+        $this->info("\nVectorization complete for {$version}!");
     }
 }

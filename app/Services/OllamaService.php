@@ -120,7 +120,7 @@ class OllamaService
         }
 
         try {
-            $response = Http::timeout(60)->post("{$this->baseUrl}/api/embeddings", [
+            $response = Http::timeout(300)->post("{$this->baseUrl}/api/embeddings", [
                 'model' => $model,
                 'prompt' => $text,
             ]);
@@ -135,7 +135,7 @@ class OllamaService
     protected function runPodEmbed(string $text, $model = 'nomic-embed-text')
     {
         try {
-            $response = Http::timeout(60)
+            $response = Http::timeout(300)
                 ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
                 ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
                     'input' => [
@@ -149,6 +149,43 @@ class OllamaService
             $this->recordSuccess();
             $json = $response->json();
             return $json['output']['embedding'] ?? [];
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
+    }
+
+    public function getEmbeddings(array $texts, $model = 'nomic-embed-text')
+    {
+        if ($this->isCircuitBroken()) {
+            return [];
+        }
+
+        if ($this->isRunPod()) {
+            return $this->runPodEmbeddings($texts, $model);
+        }
+
+        try {
+            $response = Http::timeout(300)->post("{$this->baseUrl}/api/embed", [
+                'model' => $model,
+                'input' => $texts,
+            ]);
+            $this->recordSuccess();
+            return $response->json()['embeddings'] ?? [];
+        } catch (\Exception $e) {
+            $this->recordFailure();
+            throw $e;
+        }
+    }
+
+    protected function runPodEmbeddings(array $texts, $model = 'nomic-embed-text')
+    {
+        try {
+            $allEmbeddings = [];
+            foreach ($texts as $text) {
+                $allEmbeddings[] = $this->runPodEmbed($text, $model);
+            }
+            return $allEmbeddings;
         } catch (\Exception $e) {
             $this->recordFailure();
             throw $e;
