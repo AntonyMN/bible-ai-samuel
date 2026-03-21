@@ -91,7 +91,7 @@ class OllamaService
             $content = $json['output']['response'];
             
             // Clean up any leaked headers, unauthorized versions, self-dialogue, or "Task Instructions" hallucinations
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel Blythe).*$/si', '', $content);
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel Blythe|System Documentation|Rolex system|JSONPlaceholder).*$/si', '', $content);
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);
             $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask):.*$)/si', '', $content);
             $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
