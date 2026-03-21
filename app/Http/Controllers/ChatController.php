@@ -179,7 +179,6 @@ class ChatController extends Controller
             Available Context:
             {$context}";
         }
-    }
 
         // 3b. Donor Recognition
         $isNewDonor = false;
