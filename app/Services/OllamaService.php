@@ -91,7 +91,7 @@ class OllamaService
             $content = $json['output']['response'];
             
             // Clean up any leaked headers that might have slipped through
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction).*$/si', '', $content);
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff).*$/si', '', $content);
             $content = trim($content);
 
             return [
