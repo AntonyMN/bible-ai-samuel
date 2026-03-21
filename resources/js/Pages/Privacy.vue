@@ -75,7 +75,7 @@ import { Head, Link } from '@inertiajs/vue3';
                         <p>
                             If you have any questions about this policy or your data, please reach out to us. We are here to walk with you.
                         </p>
-                    </div>
+                    </section>
                 </div>
 
                 <footer class="mt-16 pt-8 border-t border-stone-100 text-center">
