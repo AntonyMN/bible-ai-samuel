@@ -646,6 +646,20 @@ onMounted(() => {
                     <div v-if="msg.role === 'assistant'" class="markdown-content text-base leading-relaxed relative">
                         <div v-html="parseMarkdown(msg.content)"></div>
                         
+                        <!-- Citation List -->
+                        <div v-if="msg.citations && msg.citations.length > 0" class="mt-4 pt-4 border-t border-stone-100 flex flex-col space-y-3">
+                            <div class="flex items-center space-x-2 text-stone-400">
+                                <i class="fas fa-book-open text-xs"></i>
+                                <span class="text-[10px] font-bold uppercase tracking-widest">Scripture References</span>
+                            </div>
+                            <div v-for="(cite, cIdx) in msg.citations" :key="cIdx" class="bg-stone-50 p-3 rounded-xl border border-stone-100/50">
+                                <p class="text-[11px] font-bold text-stone-900 mb-1 border-b border-stone-100 pb-1 flex justify-between">
+                                    <span>{{ cite.reference }}</span>
+                                    <span class="text-[9px] text-stone-400 uppercase tracking-tighter">{{ cite.version }}</span>
+                                </p>
+                                <p class="text-xs text-stone-600 italic font-serif leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-pointer">"{{ cite.text }}"</p>
+                            </div>
+                        </div>
                     </div>
                     <p v-else :class="['text-lg leading-relaxed font-medium', msg.failed ? 'opacity-70' : '']">{{ msg.content }}</p>
                     

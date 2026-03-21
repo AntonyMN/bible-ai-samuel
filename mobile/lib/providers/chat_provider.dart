@@ -69,7 +69,11 @@ class ChatProvider extends ChangeNotifier {
     _isTyping = false;
 
     if (result != null && result['message'] != null) {
-      final aiMsg = Message.fromJson(result['message']);
+      final aiMsg = Message(
+        role: result['message']['role'],
+        content: result['message']['content'],
+        citations: result['citations'],
+      );
       _messages.add(aiMsg);
       if (result['conversation_id'] != null && _activeConversationId == null) {
         _activeConversationId = result['conversation_id'].toString();

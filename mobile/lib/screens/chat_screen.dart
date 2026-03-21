@@ -252,6 +252,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
           ),
+          if (!isUser && message.citations != null && message.citations!.isNotEmpty)
+            _buildCitations(message.citations!),
           if (!isUser)
             Padding(
               padding: const EdgeInsets.only(left: 4, bottom: 8),
@@ -276,6 +278,49 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCitations(List<dynamic> citations) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8, bottom: 4),
+      padding: const EdgeInsets.all(12),
+      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+      decoration: BoxDecoration(
+        color: Colors.purple[50]?.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.purple[100]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.menu_book, size: 14, color: Colors.purple[700]),
+              const SizedBox(width: 8),
+              Text('Scripture References', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.purple[900])),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...citations.map((cite) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${cite['reference']} (${cite['version']})',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  cite['text'],
+                  style: TextStyle(fontSize: 12, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                ),
+              ],
+            ),
+          )).toList(),
         ],
       ),
     );
