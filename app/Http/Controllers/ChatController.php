@@ -118,7 +118,7 @@ class ChatController extends Controller
         // 3. Prepare Prompt
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
 
-        $abuseKeywords = ['slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'violence', 'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence'];
+        $abuseKeywords = ['slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'punched', 'violence', 'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence', 'strangle', 'strangled', 'choke', 'choked', 'rape', 'sexual assault', 'weapon', 'knife', 'gun', 'kill me'];
         $suicideKeywords = ['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'end it all', 'no reason to live', 'goodbye world', 'better off dead', 'give up', 'done with life', 'come to an end', 'hate my life', 'can\'t take it', 'no hope', 'end my story', 'end everything'];
         $crisisKeywords = array_merge($abuseKeywords, $suicideKeywords, ['abuse', 'physical abuse', 'ending it', 'don\'t want to live']);
         
