@@ -201,7 +201,7 @@ class ChatController extends Controller
             }
 
             // Sanitization to prevent looping hallucinations from older chats
-            $gibberishPatterns = '/(System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing)/i';
+            $gibberishPatterns = '/(System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing|### Instruction|Much more diff|Hard D\d+)/i';
             $historyMessages = array_filter($historyMessages, function ($msg) use ($gibberishPatterns) {
                 return !preg_match($gibberishPatterns, $msg['content'] ?? '');
             });

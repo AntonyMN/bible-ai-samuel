@@ -33,32 +33,35 @@ class OllamaService
         }
 
         if ($this->isRunPod()) {
-            return $this->runPodChat($messages, $model, $stop);
+            $response = $this->runPodChat($messages, $model, $stop);
+        } else {
+            try {
+                $rawResponse = Http::timeout(180)->post("{$this->baseUrl}/api/chat", [
+                    'name' => $model ?? $this->model,
+                    'messages' => $messages,
+                    'stream' => false,
+                ]);
+                $this->recordSuccess();
+                $response = $rawResponse->json();
+            } catch (\Exception $e) {
+                $this->recordFailure();
+                throw $e;
+            }
         }
 
-        try {
-            $response = Http::timeout(180)->post("{$this->baseUrl}/api/chat", [
-                'name' => $model ?? $this->model,
-                'messages' => $messages,
-                'stream' => false,
-            ]);
-            $this->recordSuccess();
-            return $response->json();
-        } catch (\Exception $e) {
-            $this->recordFailure();
-            throw $e;
-        }
+        // UNIVERSAL NORMALIZATION: Apply cleaning to EVERY response
+        return $this->normalizeResponse($response);
     }
 
     protected function runPodChat(array $messages, $model = null, $stop = null)
     {
-        // Revert to 'generate' but with a much cleaner prompt construction
+        // Construct a standard Llama-style Chat prompt for RunPod
         $prompt = "";
         foreach ($messages as $msg) {
-            $role = ($msg['role'] === 'system') ? 'Instruction' : ucfirst($msg['role']);
-            $prompt .= "### {$role}:\n{$msg['content']}\n\n";
+            $role = ($msg['role'] === 'system') ? 'system' : $msg['role'];
+            $prompt .= "<|start_header_id|>{$role}<|end_header_id|>\n\n{$msg['content']}<|eot_id|>";
         }
-        $prompt .= "### Assistant:\n";
+        $prompt .= "<|start_header_id|>assistant<|end_header_id|>\n\n";
 
         try {
             $response = Http::timeout(120)
