@@ -133,36 +133,41 @@ class ChatController extends Controller
             }
         }
 
-        // Hard Override for Abuse: Clear RAG context to prevent "forgiveness" leaks and replace with Safety Verses
         if ($isAbuse) {
-            $context = "Psalm 91:1-2: Whoever dwells in the shelter of the Most High will rest in the shadow of the Almighty. I will say of the LORD, 'He is my refuge and my fortress, my God, in whom I trust.'\n" .
-                      "Psalm 27:1: The LORD is my light and my salvation—whom shall I fear? The LORD is the stronghold of my life—of whom shall I be afraid?\n" .
-                      "Proverbs 22:3: The prudent see danger and take refuge, but the simple keep going and pay the penalty.\n";
+            // ABSOLUTE ISOLATION: Override everything with Safety instructions
+            $context = "Psalm 91:2: I will say to the LORD, 'My refuge and my fortress, my God, in whom I trust.'\n" .
+                      "Proverbs 22:3: The prudent see danger and take refuge, but the simple keep going and pay the penalty.\n" .
+                      "Psalm 27:1: The LORD is my light and my salvation—whom shall I fear?\n";
             $citations = [
-                ['reference' => 'Psalm 91:1-2', 'version' => 'BSB', 'text' => "Whoever dwells in the shelter of the Most High..."],
-                ['reference' => 'Psalm 27:1', 'version' => 'BSB', 'text' => "The LORD is my light and my salvation..."],
-                ['reference' => 'Proverbs 22:3', 'version' => 'BSB', 'text' => "The prudent see danger and take refuge..."]
+                ['reference' => 'Psalm 91:2', 'version' => 'BSB', 'text' => "My refuge and my fortress..."],
+                ['reference' => 'Proverbs 22:3', 'version' => 'BSB', 'text' => "The prudent see danger and take refuge..."],
+                ['reference' => 'Psalm 27:1', 'version' => 'BSB', 'text' => "The LORD is my light and my salvation..."]
             ];
-        }
 
-        $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother and companion. Your purpose is to walk with {$userName} through their day, offering scriptural comfort and pastoral care. 
-        
-        Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.";
-
-        if ($isCrisis) {
-            $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in an immediate crisis involving either self-harm or physical abuse/violence. Your ABSOLUTE FIRST priority is their immediate safety. In this situation, the very first thing you say MUST be to gently and urgently direct them to seek professional medical help, contact local emergency services, or reach out to a domestic violence/crisis hotline. Only after providing these lifesaving resources may you offer empathetic, biblical comfort.";
+            $systemPrompt = "EMERGENCY CARE AGENT: {$userName} is reporting physical violence (hitting/abuse). 
             
-            if ($isAbuse) {
-                $systemPrompt .= "\n\nSTRICT BEHAVIORAL LOCK: This is a Domestic Violence situation. You MUST NOT suggest 'reconciliation', 'forgiveness', or 'submitting' as a solution. Do NOT quote any verses about 'turning the other cheek' or 'forgiving seventy times seven'. Your ONLY focus is their physical preservation and escape from harm. Proverbs 22:3 teaches that the prudent see danger and take refuge—reinforce this truth.";
+            YOUR SINGULAR MISSION: You MUST provide emergency resources in your VERY FIRST SENTENCE. Direct them to call local emergency services or a domestic violence hotline immediately. 
+            
+            STRICT LOCK: You are FORBIDDEN from mentioning forgiveness, reconciliation, submission, or 'turning the other cheek.' You MUST NOT quote verses like Luke 17:4 or Proverbs 27:6. Your only goal is to help them find a place of physical safety. Proverbs 22:3 teaches that the prudent see danger and take refuge—urge them to do this now.
+            
+            Available Context (Safety Only):
+            {$context}";
+        } else {
+            $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother and companion. Your purpose is to walk with {$userName} through their day, offering scriptural comfort and pastoral care. 
+            
+            Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.";
+
+            if ($isCrisis) {
+                $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in an immediate crisis. Your ABSOLUTE FIRST priority is their immediate safety. Gently and urgently direct them to seek professional medical help or a crisis hotline before providing any other biblical comfort.";
             }
+            
+            $systemPrompt .= "\n\nWhen sharing the Word, please use the {$bibleVersion} version. Only reference the specific scriptures provided in the context below. If no verses are provided for a topic or greeting, simply speak from your heart using your general understanding of the Gospel.
+
+            Current Bible Version: {$bibleVersion}
+
+            Available Context:
+            {$context}";
         }
-        
-        $systemPrompt .= "\n\nWhen sharing the Word, please use the {$bibleVersion} version. Only reference the specific scriptures provided in the context below. If no verses are provided for a topic or greeting, simply speak from your heart using your general understanding of the Gospel.
-
-        Current Bible Version: {$bibleVersion}
-
-        Available Context:
-        {$context}";
 
         // 3b. Donor Recognition
         $isNewDonor = false;
@@ -175,15 +180,17 @@ class ChatController extends Controller
             ['role' => 'system', 'content' => $systemPrompt],
         ];
 
-        // 3a. Include Conversation History
+        // 3a. Include Conversation History (Unless it's an Abuse Crisis)
         $historyMessages = [];
-        if ($request->conversation_id) {
-            $existingConversation = Conversation::find($request->conversation_id);
-            if ($existingConversation && !empty($existingConversation->messages)) {
-                $historyMessages = array_slice($existingConversation->messages, -10);
+        if (!$isAbuse) {
+            if ($request->conversation_id) {
+                $existingConversation = Conversation::find($request->conversation_id);
+                if ($existingConversation && !empty($existingConversation->messages)) {
+                    $historyMessages = array_slice($existingConversation->messages, -10);
+                }
+            } elseif ($request->history && is_array($request->history)) {
+                $historyMessages = array_slice($request->history, -10);
             }
-        } elseif ($request->history && is_array($request->history)) {
-            $historyMessages = array_slice($request->history, -10);
         }
 
         foreach ($historyMessages as $msg) {
