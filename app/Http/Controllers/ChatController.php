@@ -280,6 +280,9 @@ class ChatController extends Controller
 
                 // Dispatch job to generate title
                 GenerateConversationTitle::dispatch($conversation->id, $userMessage);
+            } elseif ($conversation->title === 'Divine Reflection' || $conversation->title === 'New Conversation') {
+                // Keep trying to generate a better title if it's still default
+                GenerateConversationTitle::dispatch($conversation->id, $userMessage);
             }
 
             $currentMessages = $conversation->messages;
