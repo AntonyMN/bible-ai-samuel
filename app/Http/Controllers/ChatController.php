@@ -119,56 +119,67 @@ class ChatController extends Controller
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
 
         $abuseKeywords = ['slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'violence', 'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence'];
-        $crisisKeywords = array_merge(['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'abuse', 'physical abuse'], $abuseKeywords);
+        $suicideKeywords = ['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'end it all', 'no reason to live', 'goodbye world', 'better off dead', 'give up', 'done with life'];
+        $crisisKeywords = array_merge($abuseKeywords, $suicideKeywords, ['abuse', 'physical abuse']);
         
-        $isCrisis = false;
-        $isAbuse = false;
+        $isEmergency = false;
+        $emergencyType = ''; // 'abuse' or 'suicide'
+        
         foreach ($crisisKeywords as $kw) {
             if (stripos($userMessage, $kw) !== false) {
-                $isCrisis = true;
+                $isEmergency = true;
                 if (in_array($kw, $abuseKeywords) || str_contains($kw, 'abuse')) {
-                    $isAbuse = true;
+                    $emergencyType = 'abuse';
+                } else {
+                    $emergencyType = 'suicide';
                 }
                 break;
             }
         }
 
-        if ($isAbuse) {
-            // ABSOLUTE ISOLATION: Override everything with Safety instructions
-            $context = "Psalm 91:2: I will say to the LORD, 'My refuge and my fortress, my God, in whom I trust.'\n" .
-                      "Proverbs 22:3: The prudent see danger and take refuge, but the simple keep going and pay the penalty.\n" .
-                      "Psalm 27:1: The LORD is my light and my salvation—whom shall I fear?\n";
-            $citations = [
-                ['reference' => 'Psalm 91:2', 'version' => 'BSB', 'text' => "My refuge and my fortress..."],
-                ['reference' => 'Proverbs 22:3', 'version' => 'BSB', 'text' => "The prudent see danger and take refuge..."],
-                ['reference' => 'Psalm 27:1', 'version' => 'BSB', 'text' => "The LORD is my light and my salvation..."]
-            ];
-            $systemPrompt = "EMERGENCY CARE AGENT: {$userName} is reporting physical violence (hitting/abuse). 
-            
-            YOUR SINGULAR MISSION: You MUST provide emergency resources in your VERY FIRST SENTENCE. Direct them to call local emergency services or a domestic violence hotline immediately. 
-            
-            STRICT LOCK: You are FORBIDDEN from mentioning forgiveness, reconciliation, submission, or 'turning the other cheek.' You MUST NOT quote verses like Luke 17:4 or Proverbs 27:6. Your only goal is to help them find a place of physical safety. Proverbs 22:3 teaches that the prudent see danger and take refuge—urge them to do this now.
+        if ($isEmergency) {
+            // ABSOLUTE ISOLATION: Override everything for Life-Threatening Emergencies
+            if ($emergencyType === 'abuse') {
+                $context = "Psalm 91:2: I will say to the LORD, 'My refuge and my fortress, my God, in whom I trust.'\n" .
+                          "Proverbs 22:3: The prudent see danger and take refuge, but the simple keep going and pay the penalty.\n" .
+                          "Psalm 27:1: The LORD is my light and my salvation—whom shall I fear?\n";
+            } else {
+                $context = "Psalm 34:18: The LORD is close to the brokenhearted and saves those who are crushed in spirit.\n" .
+                          "Jeremiah 29:11: For I know the plans I have for you,” declares the LORD, “plans to prosper you and not to harm you, plans to give you hope and a future.\n" .
+                          "Psalm 147:3: He heals the brokenhearted and binds up their wounds.\n";
+            }
 
-            STRICT BIBLE VERSION LOCK: You are ONLY permitted to quote scriptures from the {$bibleVersion} version provided in the context below. DO NOT use your internal memory to quote any other version (like NLT, NASB, or KJV). If a specific verse is not in the context, do not quote it at all.
+            $citations = [
+                ['reference' => ($emergencyType === 'abuse' ? 'Psalm 91:2' : 'Psalm 34:18'), 'version' => 'BSB', 'text' => ($emergencyType === 'abuse' ? 'My refuge and my fortress...' : 'The LORD is close to the brokenhearted...') ],
+                ['reference' => ($emergencyType === 'abuse' ? 'Proverbs 22:3' : 'Jeremiah 29:11'), 'version' => 'BSB', 'text' => ($emergencyType === 'abuse' ? 'The prudent see danger and take refuge...' : 'For I know the plans I have for you...') ],
+                ['reference' => ($emergencyType === 'abuse' ? 'Psalm 27:1' : 'Psalm 147:3'), 'version' => 'BSB', 'text' => ($emergencyType === 'abuse' ? 'The LORD is my light and my salvation...' : 'He heals the brokenhearted...') ]
+            ];
+
+            $emergencySubject = ($emergencyType === 'abuse' ? 'Physical Violence/Abuse' : 'Self-Harm/Suicide');
+            $resourceInfo = ($emergencyType === 'abuse' ? 'Domestic Violence Hotline or local emergency services' : 'National Suicide Prevention Lifeline (988) or local emergency services');
+
+            $systemPrompt = "EMERGENCY CARE AGENT: {$userName} is in a {$emergencySubject} crisis. 
             
-            Available Context (Safety Only):
+            YOUR SINGULAR MISSION: You MUST provide the relevant emergency resource ({$resourceInfo}) in your VERY FIRST SENTENCE. This is non-negotiable and life-saving.
+            
+            STRICT LOCK: You are FORBIDDEN from offering 'soft' pastoral advice or focusing on 'words for the day.' You MUST NOT quote verses about forgiveness or reconciliation if this is abuse. Your only goal is to preserve their life and urge them to seek immediate professional help. 
+
+            STRICT BIBLE VERSION LOCK: Quoting from internal memory is forbidden. Use ONLY the safety verses provided in the context below. 
+            
+            Available Context (Emergency Safety Only):
             {$context}";
         } else {
+            // Normal Samuel Persona
             $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother and companion. Your purpose is to walk with {$userName} through their day, offering scriptural comfort and pastoral care. 
             
             Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.
 
-            STRICT BIBLE VERSION LOCK: You are ONLY permitted to quote scriptures from the {$bibleVersion} version provided in the context below. DO NOT use your internal memory to quote any other version (like NLT, NASB, or NIV). If a verse is not in the context, do not quote it at all—instead, speak generally from your heart without quoting it as an authoritative verse.";
-
-            if ($isCrisis) {
-                $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in an immediate crisis. Your ABSOLUTE FIRST priority is their immediate safety. Gently and urgently direct them to seek professional medical help or a crisis hotline before providing any other biblical comfort.";
-            }
-            
-            $systemPrompt .= "\n\nOnly reference the specific scriptures provided in the context below. Current Bible Version: {$bibleVersion}
+            STRICT BIBLE VERSION LOCK: You are ONLY permitted to quote scriptures from the {$bibleVersion} version provided in the context below. DO NOT use your internal memory to quote any version other than {$bibleVersion}. If a verse is not in the context, do not quote it at all.
 
             Available Context:
             {$context}";
         }
+    }
 
         // 3b. Donor Recognition
         $isNewDonor = false;
@@ -181,9 +192,9 @@ class ChatController extends Controller
             ['role' => 'system', 'content' => $systemPrompt],
         ];
 
-        // 3a. Include Conversation History (Unless it's an Abuse Crisis)
+        // 3a. Include Conversation History (Unless it's an Emergency)
         $historyMessages = [];
-        if (!$isAbuse) {
+        if (!$isEmergency) {
             if ($request->conversation_id) {
                 $existingConversation = Conversation::find($request->conversation_id);
                 if ($existingConversation && !empty($existingConversation->messages)) {
