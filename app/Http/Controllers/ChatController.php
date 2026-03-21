@@ -119,8 +119,8 @@ class ChatController extends Controller
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
 
         $abuseKeywords = ['slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'violence', 'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence'];
-        $suicideKeywords = ['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'end it all', 'no reason to live', 'goodbye world', 'better off dead', 'give up', 'done with life'];
-        $crisisKeywords = array_merge($abuseKeywords, $suicideKeywords, ['abuse', 'physical abuse']);
+        $suicideKeywords = ['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'end it all', 'no reason to live', 'goodbye world', 'better off dead', 'give up', 'done with life', 'come to an end', 'hate my life', 'can\'t take it', 'no hope', 'end my story', 'end everything'];
+        $crisisKeywords = array_merge($abuseKeywords, $suicideKeywords, ['abuse', 'physical abuse', 'ending it', 'don\'t want to live']);
         
         $isEmergency = false;
         $emergencyType = ''; // 'abuse' or 'suicide'
@@ -242,7 +242,19 @@ class ChatController extends Controller
             Auth::user()->update(['donor_thanked_at' => now()]);
         }
 
-        // 5. Systematic Footnotes
+        // 5. Hard Prepend Safety Resources for Emergencies
+        if ($isEmergency) {
+            $resourceInfo = ($emergencyType === 'abuse') 
+                ? "PLEASE SEEK HELP IMMEDIATELY: Call the National Domestic Violence Hotline at 1-800-799-SAFE (7233), text \"START\" to 88788, or contact local emergency services (911)."
+                : "PLEASE SEEK HELP IMMEDIATELY: Call or text the Suicide & Crisis Lifeline at 988, or contact local emergency services (911).";
+            
+            // Prepend only if not already present (case-insensitive check)
+            if (stripos($aiContent, "988") === false && stripos($aiContent, "Hotline") === false) {
+                $aiContent = $resourceInfo . "\n\n" . $aiContent;
+            }
+        }
+
+        // 6. Systematic Footnotes
         $aiContent = $this->attachSystematicFootnotes($aiContent, $bibleVersion);
 
         $aiMessage = [
