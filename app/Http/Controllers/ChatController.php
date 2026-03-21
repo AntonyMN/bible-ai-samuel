@@ -269,7 +269,7 @@ class ChatController extends Controller
             if (!$conversation) {
                 $conversation = Conversation::create([
                     'user_id' => Auth::id(),
-                    'title' => 'New Conversation',
+                    'title' => 'Divine Reflection',
                     'messages' => [],
                 ]);
 
