@@ -70,8 +70,8 @@ class OllamaService
                             'model' => $model ?? $this->model,
                             'prompt' => $prompt,
                             'stream' => false,
-                            'stop' => ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:"],
-                            'temperature' => 0.3,
+                            'stop' => ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:", "Your task:", "Task:", "Pastor"],
+                            'temperature' => 0.1,
                             'max_tokens' => 1000,
                         ]
                     ]
@@ -90,10 +90,10 @@ class OllamaService
         if (isset($json['output']['response'])) {
             $content = $json['output']['response'];
             
-            // Clean up any leaked headers, unauthorized versions, or self-dialogue hallucinations
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff).*$/si', '', $content);
+            // Clean up any leaked headers, unauthorized versions, self-dialogue, or "Task Instructions" hallucinations
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time).*$/si', '', $content);
             $content = preg_replace('/(\(NLT\)|\(NASB\)|\(NIV\)|\(KJV\)|\(NKJV\)).*$/mi', '', $content);
-            $content = preg_replace('/(\n(User|Assistant|System|###):.*$)/si', '', $content);
+            $content = preg_replace('/(\n(User|Assistant|System|###|Task):.*$)/si', '', $content);
             $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
             $content = trim($content);
 
