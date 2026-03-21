@@ -52,26 +52,25 @@ class OllamaService
 
     protected function runPodChat(array $messages, $model = null, $stop = null)
     {
-        // Combine messages into a single prompt for 'generate' method
+        // Revert to 'generate' but with a much cleaner prompt construction
         $prompt = "";
         foreach ($messages as $msg) {
-            $role = ucfirst($msg['role']);
-            $prompt .= "{$role}: {$msg['content']}\n\n";
+            $role = ($msg['role'] === 'system') ? 'Instruction' : ucfirst($msg['role']);
+            $prompt .= "### {$role}:\n{$msg['content']}\n\n";
         }
-        $prompt .= "Assistant: ";
+        $prompt .= "### Assistant:\n";
 
         try {
             $response = Http::timeout(120)
                 ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
                 ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
                     'input' => [
-                        'method' => 'POST',
-                        'endpoint' => '/api/chat',
-                        'data' => [
+                        'method_name' => 'generate',
+                        'input' => [
                             'model' => $model ?? $this->model,
-                            'messages' => $messages,
+                            'prompt' => $prompt,
                             'stream' => false,
-                            'stop' => $stop ?? ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:", "Your task:", "Task:", "Pastor"],
+                            'stop' => $stop ?? ["### User:", "### Assistant:", "### System:", "### Instruction:", "<|end|>", "Your task:", "Task:", "Pastor"],
                             'temperature' => 0.6,
                             'max_tokens' => 1000,
                         ]
