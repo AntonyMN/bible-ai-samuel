@@ -90,9 +90,11 @@ class OllamaService
         if (isset($json['output']['response'])) {
             $content = $json['output']['response'];
             
-            // Clean up any leaked headers or unauthorized version markers
+            // Clean up any leaked headers, unauthorized versions, or self-dialogue hallucinations
             $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff).*$/si', '', $content);
             $content = preg_replace('/(\(NLT\)|\(NASB\)|\(NIV\)|\(KJV\)|\(NKJV\)).*$/mi', '', $content);
+            $content = preg_replace('/(\n(User|Assistant|System|###):.*$)/si', '', $content);
+            $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
             $content = trim($content);
 
             return [
