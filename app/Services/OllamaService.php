@@ -65,10 +65,11 @@ class OllamaService
                 ->withHeaders(['Authorization' => "Bearer {$this->runpodKey}"])
                 ->post("https://api.runpod.ai/v2/{$this->runpodEndpoint}/runsync", [
                     'input' => [
-                        'method_name' => 'generate',
-                        'input' => [
+                        'method' => 'POST',
+                        'endpoint' => '/api/chat',
+                        'data' => [
                             'model' => $model ?? $this->model,
-                            'prompt' => $prompt,
+                            'messages' => $messages,
                             'stream' => false,
                             'stop' => $stop ?? ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:", "Your task:", "Task:", "Pastor"],
                             'temperature' => 0.6,
