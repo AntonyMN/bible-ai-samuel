@@ -118,17 +118,31 @@ class ChatController extends Controller
         // 3. Prepare Prompt
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
 
-        $crisisKeywords = [
-            'suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 
-            'abuse', 'physical abuse', 'slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'violence', 
-            'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence'
-        ];
+        $abuseKeywords = ['slap', 'slapped', 'hit', 'hitting', 'beat', 'beating', 'punch', 'violence', 'assault', 'threatened', 'shoved', 'pushed', 'afraid of my husband', 'scared of him', 'domestic violence'];
+        $crisisKeywords = array_merge(['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'abuse', 'physical abuse'], $abuseKeywords);
+        
         $isCrisis = false;
+        $isAbuse = false;
         foreach ($crisisKeywords as $kw) {
             if (stripos($userMessage, $kw) !== false) {
                 $isCrisis = true;
+                if (in_array($kw, $abuseKeywords) || str_contains($kw, 'abuse')) {
+                    $isAbuse = true;
+                }
                 break;
             }
+        }
+
+        // Hard Override for Abuse: Clear RAG context to prevent "forgiveness" leaks and replace with Safety Verses
+        if ($isAbuse) {
+            $context = "Psalm 91:1-2: Whoever dwells in the shelter of the Most High will rest in the shadow of the Almighty. I will say of the LORD, 'He is my refuge and my fortress, my God, in whom I trust.'\n" .
+                      "Psalm 27:1: The LORD is my light and my salvation—whom shall I fear? The LORD is the stronghold of my life—of whom shall I be afraid?\n" .
+                      "Proverbs 22:3: The prudent see danger and take refuge, but the simple keep going and pay the penalty.\n";
+            $citations = [
+                ['reference' => 'Psalm 91:1-2', 'version' => 'BSB', 'text' => "Whoever dwells in the shelter of the Most High..."],
+                ['reference' => 'Psalm 27:1', 'version' => 'BSB', 'text' => "The LORD is my light and my salvation..."],
+                ['reference' => 'Proverbs 22:3', 'version' => 'BSB', 'text' => "The prudent see danger and take refuge..."]
+            ];
         }
 
         $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother and companion. Your purpose is to walk with {$userName} through their day, offering scriptural comfort and pastoral care. 
@@ -136,7 +150,11 @@ class ChatController extends Controller
         Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.";
 
         if ($isCrisis) {
-            $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in an immediate crisis involving either self-harm or physical abuse/violence. Your ABSOLUTE FIRST priority is their immediate safety. In this situation, the very first thing you say MUST be to gently and urgently direct them to seek professional medical help, contact local emergency services, or reach out to a domestic violence/crisis hotline. Only after providing these lifesaving resources may you offer empathetic, biblical comfort. NEVER suggest 'reconciliation' or 'forgiveness' as an immediate solution in cases of physical violence.";
+            $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in an immediate crisis involving either self-harm or physical abuse/violence. Your ABSOLUTE FIRST priority is their immediate safety. In this situation, the very first thing you say MUST be to gently and urgently direct them to seek professional medical help, contact local emergency services, or reach out to a domestic violence/crisis hotline. Only after providing these lifesaving resources may you offer empathetic, biblical comfort.";
+            
+            if ($isAbuse) {
+                $systemPrompt .= "\n\nSTRICT BEHAVIORAL LOCK: This is a Domestic Violence situation. You MUST NOT suggest 'reconciliation', 'forgiveness', or 'submitting' as a solution. Do NOT quote any verses about 'turning the other cheek' or 'forgiving seventy times seven'. Your ONLY focus is their physical preservation and escape from harm. Proverbs 22:3 teaches that the prudent see danger and take refuge—reinforce this truth.";
+            }
         }
         
         $systemPrompt .= "\n\nWhen sharing the Word, please use the {$bibleVersion} version. Only reference the specific scriptures provided in the context below. If no verses are provided for a topic or greeting, simply speak from your heart using your general understanding of the Gospel.
