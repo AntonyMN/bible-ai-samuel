@@ -113,15 +113,17 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Image.asset('assets/logo.png'),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text('Samuel', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            Text('Your faithful brother', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.purple[800], fontStyle: FontStyle.italic)),
+            Image.asset('assets/logo.png', height: 32),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Samuel', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Your faithful brother', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.purple[800], fontStyle: FontStyle.italic)),
+              ],
+            ),
           ],
         ),
         actions: [

@@ -114,7 +114,8 @@ class OllamaService
             // 2. Kill leaked Bible version headers
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);
             
-            // 3. Kill hallucinated conversation prompts (The "### User:" loop)
+            // 3. Kill hallucinated conversation prompts and special tokens (Llama/Mistral)
+            $content = preg_replace('/(<\|.*?\|>|### User:|### Assistant:|### System:|### Instruction:).*/si', '', $content);
             $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask|Instruction):.*$)/si', '', $content);
             
             // 4. Kill standard chat markers and cleanup whitespace
