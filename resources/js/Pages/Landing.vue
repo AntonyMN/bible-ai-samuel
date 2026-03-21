@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
 const isScrolled = ref(false);
+const isMenuOpen = ref(false);
 
 onMounted(() => {
     window.addEventListener('scroll', () => {
@@ -26,7 +27,14 @@ onMounted(() => {
                 </div>
                 <span class="text-2xl font-bold tracking-tight text-stone-800 font-['Gentium_Book_Plus']">Samuel</span>
             </div>
-            <div class="flex items-center space-x-4 md:space-x-8 text-sm font-medium text-stone-600">
+
+            <!-- Hamburger Button -->
+            <button @click="isMenuOpen = !isMenuOpen" class="md:hidden text-stone-600 focus:outline-none z-50 p-2">
+                <i :class="['fas', isMenuOpen ? 'fa-times' : 'fa-bars', 'text-2xl']"></i>
+            </button>
+
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex items-center space-x-4 md:space-x-8 text-sm font-medium text-stone-600">
                 <a href="#about" class="hover:text-purple-700 transition">About Samuel</a>
                 <a href="#features" class="hover:text-purple-700 transition">Features</a>
                 <a href="#versions" class="hover:text-purple-700 transition">Versions</a>
@@ -36,6 +44,28 @@ onMounted(() => {
                 </a>
                 <a href="https://chat.chatwithsamuel.org" class="bg-purple-700 text-white px-6 py-2 rounded-full hover:bg-purple-800 transition shadow-md hover:shadow-lg">Start Chatting</a>
             </div>
+
+            <!-- Mobile Menu Overlay -->
+            <transition
+                enter-active-class="transition duration-300 ease-out"
+                enter-from-class="opacity-0 translate-x-10"
+                enter-to-class="opacity-100 translate-x-0"
+                leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100 translate-x-0"
+                leave-to-class="opacity-0 translate-x-10"
+            >
+                <div v-if="isMenuOpen" class="fixed inset-0 z-40 bg-white/95 backdrop-blur-xl flex flex-col items-center justify-center space-y-8 md:hidden px-6 text-center">
+                    <a href="#about" @click="isMenuOpen = false" class="text-2xl font-bold text-stone-800 hover:text-purple-700 transition">About Samuel</a>
+                    <a href="#features" @click="isMenuOpen = false" class="text-2xl font-bold text-stone-800 hover:text-purple-700 transition">Features</a>
+                    <a href="#versions" @click="isMenuOpen = false" class="text-2xl font-bold text-stone-800 hover:text-purple-700 transition">Versions</a>
+                    <hr class="w-12 border-stone-200">
+                    <a href="https://ko-fi.com/Y8Y21W7RKD" target="_blank" class="flex items-center space-x-2 bg-pink-600 text-white px-8 py-3 rounded-full hover:bg-pink-700 transition shadow-lg font-bold text-lg">
+                        <i class="fas fa-heart"></i>
+                        <span>Keep Samuel Online</span>
+                    </a>
+                    <a href="https://chat.chatwithsamuel.org" class="bg-purple-700 text-white px-10 py-4 rounded-full hover:bg-purple-800 transition shadow-lg text-lg font-bold">Start Chatting</a>
+                </div>
+            </transition>
         </nav>
 
         <!-- Hero Section -->

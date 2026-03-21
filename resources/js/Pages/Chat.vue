@@ -423,7 +423,15 @@ onMounted(() => {
                 </div>
             </div>
             
-            <div class="p-4 border-t border-stone-200 bg-stone-50 text-center">
+            <div class="p-4 border-t border-stone-200 bg-stone-50 text-center space-y-4">
+                <a 
+                    href="https://ko-fi.com/Y8Y21W7RKD" 
+                    target="_blank" 
+                    class="flex items-center justify-center space-x-2 bg-pink-50 px-4 py-3 rounded-xl border border-pink-100 text-pink-700 font-bold text-sm"
+                >
+                    <i class="fas fa-heart"></i>
+                    <span>Keep Samuel Online</span>
+                </a>
                 <p class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Peace be with you</p>
             </div>
         </aside>
@@ -525,7 +533,7 @@ onMounted(() => {
                 <a 
                     href="https://ko-fi.com/Y8Y21W7RKD" 
                     target="_blank" 
-                    class="flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
+                    class="hidden md:flex items-center space-x-2 bg-pink-50/50 px-4 py-2 rounded-full border border-pink-100 hover:bg-pink-100 hover:border-pink-200 transition-all group h-10 shadow-sm"
                     title="Keep Samuel Online"
                 >
                     <i class="fas fa-heart text-xs text-pink-600 group-hover:scale-110 transition-transform"></i>
