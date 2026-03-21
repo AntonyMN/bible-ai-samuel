@@ -245,6 +245,10 @@ class _ChatScreenState extends State<ChatScreen> {
                   data: message.content,
                   styleSheet: MarkdownStyleSheet(
                     p: TextStyle(color: Colors.grey[800], fontSize: 16),
+                    listBullet: TextStyle(color: Colors.purple[700], fontWeight: FontWeight.bold),
+                    listIndent: 24.0,
+                    blockSpacing: 12.0,
+                    strong: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
           ),
