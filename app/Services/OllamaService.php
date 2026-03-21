@@ -26,14 +26,14 @@ class OllamaService
         return !empty($this->runpodKey) && !empty($this->runpodEndpoint);
     }
 
-    public function chat(array $messages, $model = null)
+    public function chat(array $messages, $model = null, $stop = null)
     {
         if ($this->isCircuitBroken()) {
             throw new \Exception("GPU connectivity is temporarily suspended due to repeated failures (Circuit Breaker).");
         }
 
         if ($this->isRunPod()) {
-            return $this->runPodChat($messages, $model);
+            return $this->runPodChat($messages, $model, $stop);
         }
 
         try {
@@ -50,7 +50,7 @@ class OllamaService
         }
     }
 
-    protected function runPodChat(array $messages, $model = null)
+    protected function runPodChat(array $messages, $model = null, $stop = null)
     {
         // Combine messages into a single prompt for 'generate' method
         $prompt = "";
@@ -70,8 +70,8 @@ class OllamaService
                             'model' => $model ?? $this->model,
                             'prompt' => $prompt,
                             'stream' => false,
-                            'stop' => ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:", "Your task:", "Task:", "Pastor"],
-                            'temperature' => 0.1,
+                            'stop' => $stop ?? ["User:", "Assistant:", "System:", "<|end|>", "###", "Instruction:", "Your task:", "Task:", "Pastor"],
+                            'temperature' => 0.6,
                             'max_tokens' => 1000,
                         ]
                     ]
