@@ -51,8 +51,17 @@ class GenerateConversationTitle implements ShouldQueue
             ['role' => 'user', 'content' => $this->firstMessage],
         ];
 
-        $response = $ollama->chat($prompt);
-        $title = trim($response['message']['content'] ?? 'Divine Reflection', '" ');
+        $response = $ollama->chat($prompt, null, ["\n", "Title:"]);
+        $title = $response['message']['content'] ?? 'Divine Reflection';
+        
+        // Clean up common AI conversational prefixing
+        $title = preg_replace('/^(Title:|"|\'|Sure! Here is a title:)\s*/i', '', $title);
+        $title = explode("\n", $title)[0];
+        $title = trim($title, '" \'.');
+        
+        if (empty($title)) {
+            $title = 'Divine Reflection';
+        }
 
         $conversation->update(['title' => $title]);
     }
