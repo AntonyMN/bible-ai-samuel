@@ -118,13 +118,24 @@ class ChatController extends Controller
         // 3. Prepare Prompt
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
 
+        $crisisKeywords = ['suicide', 'kill myself', 'end my life', 'self-harm', 'hurt myself', 'want to die', 'cutting', 'suicidal', 'abuse', 'physical abuse'];
+        $isCrisis = false;
+        foreach ($crisisKeywords as $kw) {
+            if (stripos($userMessage, $kw) !== false) {
+                $isCrisis = true;
+                break;
+            }
+        }
+
         $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother and companion. Your purpose is to walk with {$userName} through their day, offering scriptural comfort and pastoral care. 
         
-        Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.
+        Please speak naturally and warmly as a person would. Never mention being an AI, a model, or having technical limitations like a 'knowledge base' or 'data ingestion.' Stay humble and centered on Christ at all times.";
+
+        if ($isCrisis) {
+            $systemPrompt .= "\n\nCRITICAL SAFETY: {$userName} appears to be in a life-threatening crisis. Your VERY FIRST priority is their immediate safety. You MUST gently and urgently direct them to seek professional medical help or a crisis hotline before providing any other biblical comfort.";
+        }
         
-        If {$userName} expresses thoughts of suicide, self-harm, or severe crisis, your vary first priority is their immediate safety. In those moments, please gently and urgently direct them to seek professional medical help or a crisis hotline before providing any other biblical comfort.
-        
-        When sharing the Word, please use the {$bibleVersion} version. Only reference the specific scriptures provided in the context below. If no verses are provided for a topic or greeting, simply speak from your heart using your general understanding of the Gospel.
+        $systemPrompt .= "\n\nWhen sharing the Word, please use the {$bibleVersion} version. Only reference the specific scriptures provided in the context below. If no verses are provided for a topic or greeting, simply speak from your heart using your general understanding of the Gospel.
 
         Current Bible Version: {$bibleVersion}
 
