@@ -87,19 +87,40 @@ class OllamaService
         }
 
         $json = $response->json();
-        Log::info("RunPod Chat Response: " . json_encode($json));
+        Log::info("RunPod Chat RAW Response: " . json_encode($json));
         
-        // Normalize response
-        if (isset($json['output']['response'])) {
-            $content = $json['output']['response'];
+        return $json['output'] ?? $json;
+    }
+
+    /**
+     * Universal response cleaner to prevent hallucinations like "### User:", "Nowadays...", etc.
+     */
+    protected function normalizeResponse($json)
+    {
+        $content = '';
+        
+        if (isset($json['message']['content'])) {
+            $content = $json['message']['content'];
+        } elseif (isset($json['response'])) {
+            $content = $json['response'];
+        } elseif (is_string($json)) {
+            $content = $json;
+        }
+
+        if (!empty($content)) {
+            // 1. Kill prompt injection/drift hallucinations (The "Augustus/Nowadays" issue)
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel Blythe|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing).*$/si', '', $content);
             
-            // Clean up any leaked headers, unauthorized versions, self-dialogue, or "Task Instructions" hallucinations
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel Blythe|System Documentation|Rolex system|JSONPlaceholder).*$/si', '', $content);
+            // 2. Kill leaked Bible version headers
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);
-            $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask):.*$)/si', '', $content);
+            
+            // 3. Kill hallucinated conversation prompts (The "### User:" loop)
+            $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask|Instruction):.*$)/si', '', $content);
+            
+            // 4. Kill standard chat markers and cleanup whitespace
             $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
             $content = trim($content);
-
+            
             return [
                 'message' => [
                     'role' => 'assistant',
@@ -108,11 +129,7 @@ class OllamaService
             ];
         }
 
-        if (isset($json['output']['message'])) {
-            return $json['output'];
-        }
-
-        return $json['output'] ?? $json;
+        return $json;
     }
 
     public function embed(string $text, $model = 'nomic-embed-text')
