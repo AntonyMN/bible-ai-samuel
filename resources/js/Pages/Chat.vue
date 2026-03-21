@@ -432,7 +432,10 @@ onMounted(() => {
                     <i class="fas fa-heart"></i>
                     <span>Keep Samuel Online</span>
                 </a>
-                <p class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Peace be with you</p>
+                <div class="flex flex-col items-center space-y-2">
+                    <Link :href="route('privacy')" class="text-[10px] text-stone-400 uppercase tracking-widest hover:text-purple-700 transition">Privacy Policy</Link>
+                    <p class="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Peace be with you</p>
+                </div>
             </div>
         </aside>
     </div>

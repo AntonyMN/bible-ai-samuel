@@ -29,6 +29,11 @@ Route::domain($domain)->group(function () {
     Route::get('/', function () {
         return Inertia::render('Landing');
     })->name('landing');
+
+    // Privacy Policy
+    Route::get('/privacy', function () {
+        return Inertia::render('Privacy');
+    })->name('privacy');
 });
 
 // Authentication Routes (available on all domains)

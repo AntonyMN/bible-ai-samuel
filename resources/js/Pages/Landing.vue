@@ -203,6 +203,7 @@ onMounted(() => {
                 </div>
                 <div class="text-sm text-stone-400">
                     © 2026 Samuel. A spiritual companion in the light of the Word.
+                    <Link :href="route('privacy')" class="ml-4 hover:text-purple-700 transition underline decoration-stone-200 underline-offset-4">Privacy Policy</Link>
                 </div>
                 <div class="flex space-x-6 text-stone-400">
                     <a href="#" class="hover:text-purple-700 transition"><i class="fab fa-twitter"></i></a>
