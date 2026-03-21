@@ -198,6 +198,13 @@ class ChatController extends Controller
             } elseif ($request->history && is_array($request->history)) {
                 $historyMessages = array_slice($request->history, -10);
             }
+
+            // Sanitization: Remove poisoned history (prevents Hallucination Loops)
+            $gibberishPatterns = '/(System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing)/i';
+            $historyMessages = array_filter($historyMessages, function($msg) use ($gibberishPatterns) {
+                return !preg_match($gibberishPatterns, $msg['content'] ?? '');
+            });
+            $historyMessages = array_values($historyMessages); // Re-index
         }
 
         foreach ($historyMessages as $msg) {
