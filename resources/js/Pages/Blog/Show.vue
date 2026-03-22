@@ -70,7 +70,7 @@ if (typeof window !== 'undefined') {
                             <i class="fas fa-bible text-2xl"></i>
                         </div>
                         <p class="text-stone-500 italic font-['Gentium_Book_Plus']">Peace be with you always.</p>
-                        <p class="text-stone-800 mt-2 font-bold">— Samuel Blythe</p>
+                        <p class="text-stone-800 mt-2 font-bold">— Samuel</p>
                     </div>
                 </article>
                 

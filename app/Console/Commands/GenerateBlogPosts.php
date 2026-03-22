@@ -33,15 +33,15 @@ class GenerateBlogPosts extends Command
         $this->info("Selected Topic: {$topic}");
 
         // 3. Generate Content using Samuel Persona
-        $systemPrompt = "You are Samuel, a warm, empathetic Christian brother. Write a blog post for 'Samuel.ai' about: '{$topic}'.
+        $systemPrompt = "You are Samuel, a warm, humble, and encouraging Christian brother (AI companion). Write a blog post for 'Samuel.ai' on the topic: '{$topic}'.
         
-        Provide your response as a FLAT JSON object with exactly these 4 keys:
-        1. 'title': A short, brotherly title.
-        2. 'content': The Markdown content with scriptural insights.
-        3. 'meta_description': 150-char SEO summary.
-        4. 'image_prompt': A single sentence describing a peaceful, artistic, or natural scene related to the topic (no text, no faces).
+        CRITICAL RULES:
+        1. SCRIPTURAL ACCURACY: You MUST provide accurate Bible citations. Do not hallucinate verses or assign the wrong scripture to the wrong book/chapter. If you are unsure, use well-known verses like Psalm 23, John 3:16, etc.
+        2. PERSONA: You are 'Samuel'. Use a warm, first-person brotherly tone. Do not use a last name. 
+        3. STRUCTURE: Use Markdown headers (###), bold text, and clear paragraphs for readability.
+        4. OUTPUT: Provide your response ONLY as a FLAT JSON object with exactly these 4 keys: 'title', 'content' (Markdown), 'meta_description', and 'image_prompt'.
         
-        Example: {\"title\": \"...\", \"content\": \"...\", \"meta_description\": \"...\", \"image_prompt\": \"...\"}";
+        Example: {\"title\": \"A Quiet Heart\", \"content\": \"### Peace in the Chaos...\", \"meta_description\": \"Finding peace...\", \"image_prompt\": \"A tranquil morning lake...\"}";
 
         try {
             $messages = [
@@ -53,34 +53,37 @@ class GenerateBlogPosts extends Command
             $aiData = $this->parseJsonResponse($response);
 
             // Fallback / Cleaning
-            if (!$aiData || !isset($aiData['title'])) {
+            if (!$aiData || empty($aiData['content'])) {
                 Log::error("AI Blog Generation Parse Failure. RAW Response: " . json_encode($response));
                 $this->error("Failed to parse AI response. See logs.");
-                // Try one more time with a very simple recovery
-                if (is_string($response['message']['content'] ?? null)) {
-                    $this->info("Attempting simple string recovery...");
-                    $aiData['content'] = $response['message']['content'];
-                    $aiData['title'] = "Peace in the Digital Age: A Reflection";
+                
+                // HIGHLY ROBUST EXTRACTION: Try to pull content between markers if JSON fails
+                $raw = $response['message']['content'] ?? '';
+                if (preg_match('/"content":\s*"(.*?)"/s', $raw, $matches)) {
+                    $aiData['content'] = stripslashes($matches[1]);
+                    $aiData['title'] = $aiData['title'] ?? "Reflections on " . $topic;
                 } else {
-                    return 1;
+                    // Last resort: Clean the raw string if it looks like the content
+                    $aiData['content'] = preg_replace('/^\{.*"content":\s*"/s', '', $raw);
+                    $aiData['content'] = preg_replace('/",\s*"meta_description".*\}$/s', '', $aiData['content']);
+                    $aiData['title'] = "Peace in the Digital Age: A Reflection";
                 }
             }
 
             $aiData['meta_description'] = $aiData['meta_description'] ?? Str::limit(strip_tags($aiData['content'] ?? ''), 150);
             $aiData['image_prompt'] = $aiData['image_prompt'] ?? "A peaceful scene representing " . $topic;
-            $aiData['title'] = is_array($aiData['title']) ? "Reflections on " . $topic : $aiData['title'];
+            $aiData['title'] = is_array($aiData['title'] ?? null) ? "Reflections on " . $topic : ($aiData['title'] ?? "Reflections on " . $topic);
 
             $this->info("Title Generated: " . $aiData['title']);
 
             // 4. Generate Image
             $this->info("Generating image with prompt: " . $aiData['image_prompt']);
             $imageUrl = $runpodImage->generateImage($aiData['image_prompt']);
-            $this->info("Image generated: {$imageUrl}");
-
+            
             // 5. Save to Database
             $post = Post::create([
                 'title' => $aiData['title'],
-                'slug' => Str::slug($aiData['title']),
+                'slug' => Str::slug($aiData['title']) . '-' . rand(100, 999), 
                 'content' => $aiData['content'],
                 'image_url' => $imageUrl,
                 'topic' => $topic,
@@ -102,8 +105,23 @@ class GenerateBlogPosts extends Command
     protected function parseJsonResponse($response)
     {
         $content = $response['message']['content'] ?? '';
-        // Strip potential markdown blocks
-        $content = preg_replace('/^```json\s*|\s*```$/i', '', $content);
-        return json_decode(trim($content), true);
+        
+        // 1. Standard approach
+        $clean = preg_replace('/^```json\s*|\s*```$/i', '', trim($content));
+        $data = json_decode($clean, true);
+        
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $data;
+        }
+
+        // 2. Aggressive cleaning for unescaped newlines/quotes
+        // This is a common issue with smaller Llama models
+        try {
+            // Attempt to fix common JSON errors before parsing
+            $clean = preg_replace('/(?<!\\\\)\n/', '\\n', $clean); // Fix unescaped newlines
+            return json_decode($clean, true);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }
