@@ -9,10 +9,24 @@ use App\Http\Controllers\ChatController;
 
 $domain = parse_url(config('app.url'), PHP_URL_HOST);
 
+// Blog Subdomain
+Route::domain('blog.' . $domain)->group(function () {
+    Route::get('/', [\App\Http\Controllers\BlogController::class, 'index'])->name('blog.index');
+    Route::get('/{slug}', [\App\Http\Controllers\BlogController::class, 'show'])->name('blog.show');
+});
+
 // Admin Subdomain
 Route::domain('admin.' . $domain)->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');
+        
+        // Blog Management
+        Route::prefix('blog')->name('admin.blog.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\BlogController::class, 'index'])->name('index');
+            Route::get('/{id}/edit', [\App\Http\Controllers\Admin\BlogController::class, 'edit'])->name('edit');
+            Route::patch('/{id}', [\App\Http\Controllers\Admin\BlogController::class, 'update'])->name('update');
+            Route::delete('/{id}', [\App\Http\Controllers\Admin\BlogController::class, 'destroy'])->name('destroy');
+        });
     });
 });
 

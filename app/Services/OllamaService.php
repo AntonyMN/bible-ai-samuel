@@ -75,7 +75,7 @@ class OllamaService
                             'stream' => false,
                             'stop' => $stop ?? ["### User:", "### Assistant:", "### System:", "### Instruction:", "<|end|>", "Your task:", "Task:", "Pastor"],
                             'temperature' => 0.6,
-                            'max_tokens' => 1000,
+                            'max_tokens' => 4000,
                         ]
                     ]
                 ]);

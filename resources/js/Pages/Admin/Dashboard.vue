@@ -138,6 +138,14 @@ const countryList = computed(() => {
             <span class="text-xs text-slate-500">avg: {{ stats.avg_active }}</span>
           </div>
         </div>
+        <!-- Blog Management Card -->
+        <Link :href="route('admin.blog.index')" class="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-6 hover:border-purple-500/50 transition-all group flex flex-col justify-center">
+          <div class="flex items-center justify-between">
+            <p class="text-purple-400 text-sm font-bold uppercase tracking-widest">Blog Management</p>
+            <i class="fas fa-newspaper text-purple-400 group-hover:scale-110 transition-transform"></i>
+          </div>
+          <p class="text-slate-400 text-xs mt-2 group-hover:text-slate-200 transition-colors">Moderate and edit AI-generated posts.</p>
+        </Link>
       </div>
 
       <!-- Charts Section -->
