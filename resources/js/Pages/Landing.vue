@@ -115,10 +115,15 @@ onMounted(() => {
                         </div>
                         <!-- Mockup Inner (Simplified representation) -->
                         <div class="absolute inset-0 flex items-center justify-center overflow-hidden">
-                             <img src="/images/samuel_persona.png" class="w-full h-full object-cover opacity-40 group-hover:scale-105 transition-transform duration-700" alt="Samuel Persona" />
-                             <div class="absolute inset-0 flex items-center justify-center">
-                                <i class="fas fa-play-circle text-8xl text-stone-100/40 group-hover:scale-110 transition-transform cursor-pointer"></i>
-                             </div>
+                             <video 
+                                src="/images/Video_Creation_For_Website_Landing_Page.mp4" 
+                                class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-700" 
+                                autoplay 
+                                loop 
+                                muted 
+                                playsinline
+                             ></video>
+
                         </div>
                     </div>
                 </div>
@@ -153,7 +158,7 @@ onMounted(() => {
                     <div class="relative">
                         <div class="aspect-square bg-purple-50 rounded-[60px] transform rotate-3 absolute inset-0 -z-10"></div>
                         <div class="aspect-square bg-stone-100 rounded-[60px] overflow-hidden border border-stone-200 shadow-inner">
-                             <img src="/images/samuel_persona.png" class="w-full h-full object-cover" alt="Samuel" />
+                             <img src="/images/sam_two.png" class="w-full h-full object-cover" alt="Samuel" />
                         </div>
                     </div>
                 </div>
