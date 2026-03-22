@@ -72,6 +72,10 @@ class GenerateBlogPosts extends Command
                 // FIX ESCAPED CHARACTERS: Manual unescaping for the most common issues
                 $aiData['content'] = str_replace(['\\n', '\\r'], ["\n", "\r"], $aiData['content']);
                 $aiData['content'] = str_replace('\\"', '"', $aiData['content']);
+                // FIX COMMON MARKDOWN ISSUES: Ensure headers have a newline before them
+                $aiData['content'] = preg_replace('/([^\n])\n(#{1,6}\s)/', "$1\n\n$2", $aiData['content']);
+                $aiData['content'] = preg_replace('/([^\n])(#{1,6}\s)/', "$1\n\n$2", $aiData['content']);
+
                 $aiData['title'] = $aiData['title'] ?? "Reflections on " . $topic;
             }
 

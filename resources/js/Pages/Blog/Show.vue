@@ -99,11 +99,12 @@ if (typeof window !== 'undefined') {
 
 <style>
 /* Markdown Content Styling */
-.post-content h2 { @apply text-3xl font-bold mt-12 mb-6 text-stone-900 font-['Gentium_Book_Plus']; }
-.post-content h3 { @apply text-2xl font-bold mt-8 mb-4 text-stone-800 font-['Gentium_Book_Plus']; }
-.post-content p { @apply mb-6; }
-.post-content b, .post-content strong { @apply text-purple-800 font-bold; }
-.post-content ul { @apply list-disc list-inside mb-6; }
-.post-content li { @apply mb-2; }
-.post-content hr { @apply my-12 border-stone-200; }
+.post-content h1 { font-size: 2.25rem; font-weight: 800; margin-top: 2.5rem; margin-bottom: 1.5rem; color: #1c1917; font-family: 'Gentium Book Plus', serif; }
+.post-content h2 { font-size: 1.875rem; font-weight: 700; margin-top: 2rem; margin-bottom: 1rem; color: #1c1917; font-family: 'Gentium Book Plus', serif; }
+.post-content h3 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #292524; font-family: 'Gentium Book Plus', serif; }
+.post-content p { margin-bottom: 1.5rem; line-height: 1.8; }
+.post-content b, .post-content strong { color: #7e22ce; font-weight: 700; }
+.post-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1.5rem; }
+.post-content li { margin-bottom: 0.5rem; }
+.post-content hr { margin: 3rem 0; border-top: 1px solid #e7e5e4; }
 </style>
