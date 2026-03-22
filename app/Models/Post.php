@@ -18,6 +18,7 @@ class Post extends Model
         'status', // draft, published
         'published_at',
         'meta_description',
+        'audio_url',
     ];
 
     protected $casts = [

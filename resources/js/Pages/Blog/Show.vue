@@ -56,9 +56,23 @@ if (typeof window !== 'undefined') {
                     {{ post.title }}
                 </h1>
 
-                <div class="relative rounded-[40px] overflow-hidden shadow-2xl mb-16 aspect-[21/9]">
+                <div class="relative rounded-[40px] overflow-hidden shadow-2xl mb-8 aspect-[21/9]">
                     <img :src="post.image_url" :alt="post.title" class="w-full h-full object-cover" loading="lazy" />
                     <div class="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent"></div>
+                </div>
+
+                <!-- Audio Player (if exists) -->
+                <div v-if="post.audio_url" class="mb-12 bg-white/40 backdrop-blur-md rounded-[30px] p-6 border border-white/60 shadow-sm flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+                    <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg animate-pulse">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                    <div class="flex-1 w-full">
+                        <p class="text-xs font-bold uppercase tracking-widest text-purple-700 mb-2">Listen to Samuel's Reflection</p>
+                        <audio controls class="w-full h-8 accent-purple-700">
+                            <source :src="post.audio_url" type="audio/wav">
+                            Your browser does not support the audio element.
+                        </audio>
+                    </div>
                 </div>
 
                 <!-- Articles Content -->
