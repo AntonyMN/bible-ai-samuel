@@ -68,7 +68,7 @@ if (typeof window !== 'undefined') {
                     </div>
                     <div class="flex-1 w-full">
                         <p class="text-xs font-bold uppercase tracking-widest text-purple-700 mb-2">Listen to Samuel's Reflection</p>
-                        <audio controls class="w-full h-8 accent-purple-700">
+                        <audio controls preload="none" class="w-full h-8 accent-purple-700">
                             <source :src="post.audio_url" type="audio/wav">
                             Your browser does not support the audio element.
                         </audio>
