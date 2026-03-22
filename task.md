@@ -27,4 +27,8 @@
     - [x] Implement automatic posting in `GenerateBlogPosts.php` [x]
     - [ ] Verify test post on Facebook page (Blocked by Token Permissions) [ ]
 
-**Status:** Completed. Facebook integration is live but requires a Page Access Token with `pages_manage_posts` permissions.
+**Status:**
+- [x] Enable and verify Facebook Page integration
+    - [x] Retrieve and verify Page Access Token
+    - [x] Automate posting with audio link
+- [ ] Refine Samuel's blog persona (brotherly tone vs corporate)
