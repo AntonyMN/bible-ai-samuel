@@ -57,7 +57,7 @@ if (typeof window !== 'undefined') {
                 </h1>
 
                 <div class="relative rounded-[40px] overflow-hidden shadow-2xl mb-16 aspect-[21/9]">
-                    <img :src="post.image_url" :alt="post.title" class="w-full h-full object-cover" />
+                    <img :src="post.image_url" :alt="post.title" class="w-full h-full object-cover" loading="lazy" />
                     <div class="absolute inset-0 bg-gradient-to-t from-stone-900/40 to-transparent"></div>
                 </div>
 
