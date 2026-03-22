@@ -21,7 +21,19 @@ if (typeof window !== 'undefined') {
 </script>
 
 <template>
-    <Head :title="post.title + ' - Samuel\'s Journal'" />
+    <Head>
+        <title>{{ post.title }} - Samuel's Journal</title>
+        <meta name="description" :content="post.meta_description" />
+        <meta property="og:title" :content="post.title" />
+        <meta property="og:description" :content="post.meta_description" />
+        <meta property="og:image" :content="post.image_url" />
+        <meta property="og:url" :content="'https://blog.chatwithsamuel.org/' + post.slug" />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" :content="post.title" />
+        <meta name="twitter:description" :content="post.meta_description" />
+        <meta name="twitter:image" :content="post.image_url" />
+    </Head>
     <div class="min-h-screen bg-stone-50 text-stone-900 font-['Outfit'] selection:bg-purple-200 selection:text-purple-900">
         <!-- Navigation -->
         <nav 

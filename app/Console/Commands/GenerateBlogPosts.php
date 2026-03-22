@@ -112,9 +112,9 @@ class GenerateBlogPosts extends Command
 
             // 9. Share to Facebook
             $this->info("Sharing to Facebook...");
-            $message = "🌟 New Reflection from Samuel: " . $post->title . "\n\n" . $post->meta_description . "\n\nRead more and listen here:";
-            $link = "https://blog.chatwithsamuel.org/" . $post->slug;
-            $fbResponse = $facebook->postToPage($message, $link);
+            $message = "🌟 New Reflection from Samuel: " . $post->title . "\n\n" . $post->meta_description . "\n\nRead more and listen here: " . "https://blog.chatwithsamuel.org/" . $post->slug;
+            
+            $fbResponse = $facebook->postPhoto($message, $post->image_url);
 
             if ($fbResponse && isset($fbResponse['id'])) {
                 $this->info("Shared to Facebook successfully! (ID: " . $fbResponse['id'] . ")");
