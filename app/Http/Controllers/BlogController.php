@@ -12,7 +12,7 @@ class BlogController extends Controller
     {
         $posts = Post::where('status', 'published')
             ->orderBy('published_at', 'desc')
-            ->paginate(9);
+            ->paginate(8);
 
         return Inertia::render('Blog/Index', [
             'posts' => $posts,

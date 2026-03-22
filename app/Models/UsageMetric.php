@@ -11,10 +11,14 @@ class UsageMetric extends Model
 
     protected $fillable = [
         'date',
-        'authenticated_calls',
-        'unauthenticated_calls',
+        'authenticated_calls', // Legacy/General
+        'unauthenticated_calls', // Legacy/General
+        'page_views',
+        'authenticated_queries',
+        'unauthenticated_queries',
         'active_users',
         'countries', // Array of country_code => count
+        'post_views', // Array of slug => count
     ];
 
     protected $casts = [

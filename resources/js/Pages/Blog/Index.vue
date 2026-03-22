@@ -52,31 +52,62 @@ if (typeof window !== 'undefined') {
             </div>
         </header>
 
-        <!-- Blog Grid -->
+        <!-- Blog Content -->
         <main class="max-w-6xl mx-auto px-6 pb-24 relative z-10">
-            <div class="grid md:grid-cols-3 gap-8">
-                <article v-for="post in posts.data" :key="post.id" class="group bg-white/40 backdrop-blur-xl border border-white/60 rounded-[40px] shadow-sm hover:shadow-xl transition-all overflow-hidden flex flex-col">
-                    <div class="aspect-video overflow-hidden relative">
-                        <img :src="post.image_url" :alt="post.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+            <!-- Featured Post (First one) -->
+            <div v-if="posts.data.length > 0" class="mb-16">
+                <article class="group relative bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px] hover:shadow-purple-200/50 transition-all duration-700">
+                    <div class="md:w-3/5 overflow-hidden relative">
+                        <img :src="posts.data[0].image_url" :alt="posts.data[0].title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                        <div class="absolute top-8 left-8">
+                            <span class="bg-purple-700 text-white text-xs font-bold uppercase tracking-[0.2em] px-4 py-2 rounded-full shadow-lg">
+                                Featured Reflection
+                            </span>
+                        </div>
+                    </div>
+                    <div class="md:w-2/5 p-12 flex flex-col justify-center">
+                        <span class="text-stone-400 font-bold uppercase tracking-widest text-xs mb-4">
+                             {{ new Date(posts.data[0].published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}
+                        </span>
+                        <h2 class="text-4xl font-bold mb-6 text-stone-900 font-['Gentium_Book_Plus'] leading-tight group-hover:text-purple-700 transition-colors">
+                            {{ posts.data[0].title }}
+                        </h2>
+                        <p class="text-lg text-stone-600 mb-8 line-clamp-4 leading-relaxed italic">
+                            {{ posts.data[0].meta_description }}
+                        </p>
+                        <Link :href="route('blog.show', posts.data[0].slug)" class="inline-flex items-center space-x-2 bg-stone-900 text-white px-8 py-4 rounded-full w-fit hover:bg-purple-700 transition shadow-xl font-bold">
+                            <span>Read Full Insight</span>
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </Link>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Blog Grid (Remaining posts) -->
+            <div class="grid md:grid-cols-3 gap-10">
+                <article v-for="post in posts.data.slice(1)" :key="post.id" class="group bg-white/40 backdrop-blur-xl border border-white/60 rounded-[40px] shadow-sm hover:shadow-xl transition-all overflow-hidden flex flex-col hover:-translate-y-2 duration-500">
+                    <div class="aspect-[16/10] overflow-hidden relative">
+                        <img :src="post.image_url" :alt="post.title" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" />
                         <div class="absolute top-4 left-4">
-                            <span class="bg-purple-700/80 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-white/20">
+                            <span class="bg-white/80 backdrop-blur-md text-stone-800 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-stone-200">
                                 {{ post.topic }}
                             </span>
                         </div>
                     </div>
                     <div class="p-8 flex-1 flex flex-col">
-                        <h2 class="text-2xl font-bold mb-4 text-stone-800 font-['Gentium_Book_Plus'] group-hover:text-purple-700 transition-colors">
+                        <h3 class="text-2xl font-bold mb-4 text-stone-800 font-['Gentium_Book_Plus'] group-hover:text-purple-700 transition-colors leading-tight">
                             {{ post.title }}
-                        </h2>
-                        <p class="text-stone-600 line-clamp-3 mb-6 flex-1">
+                        </h3>
+                        <p class="text-stone-600 line-clamp-3 mb-6 flex-1 text-sm leading-relaxed">
                             {{ post.meta_description }}
                         </p>
                         <div class="flex items-center justify-between mt-auto pt-6 border-t border-stone-200/40">
-                            <span class="text-xs text-stone-400 font-bold uppercase tracking-widest">
+                            <span class="text-[10px] text-stone-400 font-bold uppercase tracking-[0.1em]">
                                 {{ new Date(post.published_at).toLocaleDateString() }}
                             </span>
-                            <Link :href="route('blog.show', post.slug)" class="text-purple-700 font-bold text-sm hover:underline">
-                                Read More &rarr;
+                            <Link :href="route('blog.show', post.slug)" class="text-purple-700 font-bold text-sm flex items-center space-x-1 group/btn">
+                                <span>Read More</span>
+                                <i class="fas fa-chevron-right text-[10px] group-hover/btn:translate-x-1 transition-transform"></i>
                             </Link>
                         </div>
                     </div>
