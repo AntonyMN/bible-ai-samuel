@@ -1,9 +1,14 @@
 <script setup>
 import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { marked } from 'marked';
 
 const props = defineProps({
     post: Object,
+});
+
+const parsedContent = computed(() => {
+    return marked.parse(props.post.content || '');
 });
 
 const isScrolled = ref(false);
@@ -58,7 +63,7 @@ if (typeof window !== 'undefined') {
 
                 <!-- Articles Content -->
                 <article class="prose prose-stone prose-lg max-w-none bg-white/60 backdrop-blur-xl p-8 md:p-16 rounded-[40px] border border-white/80 shadow-sm mb-24">
-                    <div class="post-content font-serif leading-relaxed text-stone-800" v-html="post.content"></div>
+                    <div class="post-content font-serif leading-relaxed text-stone-800" v-html="parsedContent"></div>
                     
                     <div class="mt-16 pt-8 border-t border-stone-200 flex flex-col items-center">
                         <div class="w-16 h-16 bg-purple-700 rounded-full flex items-center justify-center text-white shadow-lg mb-4">
