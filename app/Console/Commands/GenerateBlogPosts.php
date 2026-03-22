@@ -63,7 +63,10 @@ class GenerateBlogPosts extends Command
             $aiData['content'] = $this->attachSystematicFootnotes($aiData['content'], 'BSB');
 
             $aiData['meta_description'] = $aiData['meta_description'] ?? Str::limit(strip_tags($aiData['content']), 150);
-            $aiData['image_prompt'] = $aiData['image_prompt'] ?? "A peaceful scene representing " . $topic;
+            
+            // Ensure title and image_prompt are strings (LLMs sometimes output arrays)
+            $aiData['title'] = is_array($aiData['title'] ?? null) ? implode(' ', $aiData['title']) : ($aiData['title'] ?? "Reflections on " . $topic);
+            $aiData['image_prompt'] = is_array($aiData['image_prompt'] ?? null) ? implode(' ', $aiData['image_prompt']) : ($aiData['image_prompt'] ?? "A peaceful scene representing " . $topic);
 
             $this->info("Title Generated: " . $aiData['title']);
 
