@@ -15,6 +15,7 @@ I have successfully implemented the automated blogging system for Samuel.ai. Thi
     - [x] Retrieve and verify Page Access Token
     - [x] Automate posting with audio link
 - [x] Refine Samuel's blog persona (brotherly tone vs corporate)
+- [x] Implement lazy loading for blog audio (`preload="none"`)
 - **Robust Parsing**: Added recovery logic to handle variations in AI-generated JSON responses.
 
 ### 2. AI Image Generation (SDXL)
@@ -61,6 +62,7 @@ Verified that `blog.chatwithsamuel.org` is now served over HTTPS.
 - **Voiceover File**: [blog_69c046017171dcf0e301c742.wav](https://chatwithsamuel.org/audio/blog_69c046017171dcf0e301c742.wav) (Brotherly tone verified)
 - **Facebook Post**: [View on Page](https://www.facebook.com/1049473438249397/posts/122096353574917497) (Successfully shared with Page Token)
 - **Persona Verification**: Confirmed that Samuel now uses "I" and "My dear brothers and sisters" instead of corporate "we".
+- **Performance Optimization**: Implemented `preload="none"` on the audio player in `Show.vue` to prevent 6MB+ WAV files from slowing down initial page loads.
 
 ## Troubleshooting Notes
  Optimization

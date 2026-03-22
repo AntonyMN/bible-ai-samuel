@@ -31,4 +31,5 @@
 - [x] Enable and verify Facebook Page integration
     - [x] Retrieve and verify Page Access Token
     - [x] Automate posting with audio link
-- [ ] Refine Samuel's blog persona (brotherly tone vs corporate)
+- [x] Refine Samuel's blog persona (brotherly tone vs corporate)
+- [ ] Implement lazy loading for blog audio (`preload="none"`)
