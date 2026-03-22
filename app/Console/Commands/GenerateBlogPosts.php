@@ -5,21 +5,31 @@ namespace App\Console\Commands;
 use App\Models\Post;
 use App\Services\OllamaService;
 use App\Services\RunPodImageService;
+use App\Services\FacebookService;
+use App\Services\TtsService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class GenerateBlogPosts extends Command
 {
-    protected $signature = 'samuel:generate-blog';
+    protected $signature = 'samuel:generate-blog {--jitter=0 : Random delay in minutes} {--evening : Prioritize evening themes}';
     protected $description = 'Generate a new blog post using Samuel persona and RDXL image generation';
 
-    public function handle(OllamaService $ollama, RunPodImageService $runpodImage, \App\Services\FacebookService $facebook, \App\Services\TtsService $tts)
+    public function handle(OllamaService $ollama, RunPodImageService $runpodImage, FacebookService $facebook, TtsService $tts)
     {
+        // Handle Jitter
+        if ($jitterMax = (int) $this->option('jitter')) {
+            $delay = rand(0, $jitterMax);
+            $this->info("Jitter enabled (max {$jitterMax}m). Sleeping for {$delay} minutes...");
+            sleep($delay * 60);
+        }
+
         $this->info("Starting automated blog generation...");
 
         // 1. Fetch Dynamic Topic from Google News RSS
-        $topic = $this->fetchDynamicTopic();
+        $topic = $this->fetchDynamicTopic($this->option('evening'));
         $this->info("Selected Topic: {$topic}");
 
         // 3. Generate Content using Samuel Persona (BSB Default)
@@ -118,14 +128,31 @@ class GenerateBlogPosts extends Command
 
             if ($fbResponse && isset($fbResponse['id'])) {
                 $this->info("Shared to Facebook successfully! (ID: " . $fbResponse['id'] . ")");
+            } else {
+                $this->sendFailureNotification("Blog post created but Facebook sharing failed. Title: " . $post->title);
             }
 
             return 0;
 
         } catch (\Exception $e) {
-            $this->error("Error: " . $e->getMessage());
-            Log::error("Blog Generation Command Failed: " . $e->getMessage());
+            $errorMsg = "Samuel AI Blog Generation Failed: " . $e->getMessage();
+            $this->error($errorMsg);
+            Log::error($errorMsg);
+            $this->sendFailureNotification($errorMsg);
             return 1;
+        }
+    }
+
+    private function sendFailureNotification($message)
+    {
+        try {
+            Mail::raw($message, function ($mail) {
+                $mail->to('antonymuriuki7@gmail.com')
+                     ->subject('Samuel AI: Blog Generation/Social Failure Alert');
+            });
+            $this->info("Failure notification sent to antonymuriuki7@gmail.com");
+        } catch (\Exception $e) {
+            Log::error("Failed to send notification email: " . $e->getMessage());
         }
     }
 
@@ -197,9 +224,10 @@ class GenerateBlogPosts extends Command
         }
     }
 
-    protected function fetchDynamicTopic()
+    protected function fetchDynamicTopic($evening = false)
     {
-        $rssUrl = "https://news.google.com/rss/search?q=Christian+faith+technology+spiritual+wellness&hl=en-US&gl=US&ceid=US:en";
+        $search = $evening ? "Christian+faith+Peace+Sleep+winding+down" : "Christian+faith+technology+spiritual+wellness";
+        $rssUrl = "https://news.google.com/rss/search?q=" . urlencode($search) . "&hl=en-US&gl=US&ceid=US:en";
         
         try {
             $rss = simplexml_load_file($rssUrl);
