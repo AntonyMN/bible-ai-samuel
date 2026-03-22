@@ -13,7 +13,12 @@ I have successfully implemented the automated blogging system for Samuel.ai. Thi
         - [x] Implement 72-hour audio cleanup policy
     - [x] Enable and verify Facebook Page integration
     - [x] Retrieve and verify Page Access Token
+    - [x] Schedule automated blog posts (Morning/Evening)
+    - [x] Implement jitter and evening-topic logic in `GenerateBlogPosts.php`
+    - [x] Configure `routes/console.php` schedule
     - [x] Automate posting with audio link
+- [x] Implement email notifications for blog generation failures
+- [x] Update production crontab with Laravel scheduler (`schedule:run`)
 - [x] Refine Samuel's blog persona (brotherly tone vs corporate)
 - [x] Implement lazy loading for blog audio (`preload="none"`)
 - [x] Fix Facebook image sharing (direct photo upload + OG tags)
@@ -65,6 +70,10 @@ Verified that `blog.chatwithsamuel.org` is now served over HTTPS.
 - **Persona Verification**: Confirmed that Samuel now uses "I" and "My dear brothers and sisters" instead of corporate "we".
 - **Performance Optimization**: Implemented `preload="none"` on the audio player in `Show.vue` to prevent 6MB+ WAV files from slowing down initial page loads.
 - **Image Integration**: Switched to Facebook's `/{page_id}/photos` API and added full Open Graph tags to ensure the generated AI image is always visible on social media.
+- **Twice-Daily Scheduling**: Configured the Laravel scheduler to trigger blog generation at 6:00 AM (Morning) and 8:30 PM (Evening) daily, using the `Africa/Nairobi` timezone.
+- **Jitter & Randomization**: Added a `--jitter` option to `samuel:generate-blog` to introduce random delays of up to 150 minutes, ensuring posts appear natural and non-robotic.
+- **Theme Awareness**: Samuel now prioritizes "Peace" and "Sleep" topics for his evening reflections to better serve users winding down their day.
+- **Failure Alerts**: Implemented an email notification system that alerts `antonymuriuki7@gmail.com` if any critical errors occur during the automated process.
 
 ## Troubleshooting Notes
  Optimization
