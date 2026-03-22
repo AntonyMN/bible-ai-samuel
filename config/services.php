@@ -45,4 +45,10 @@ return [
         'endpoint_id' => env('RUNPOD_ENDPOINT_ID'),
     ],
 
+    'facebook' => [
+        'page_id' => env('FACEBOOK_PAGE_ID'),
+        'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+        'app_id' => env('FACEBOOK_APP_ID'),
+    ],
+
 ];

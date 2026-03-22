@@ -14,7 +14,7 @@ class GenerateBlogPosts extends Command
     protected $signature = 'samuel:generate-blog';
     protected $description = 'Generate a new blog post using Samuel persona and RDXL image generation';
 
-    public function handle(OllamaService $ollama, RunPodImageService $runpodImage)
+    public function handle(OllamaService $ollama, RunPodImageService $runpodImage, \App\Services\FacebookService $facebook)
     {
         $this->info("Starting automated blog generation...");
 
@@ -49,20 +49,16 @@ class GenerateBlogPosts extends Command
                 
                 // HIGHLY ROBUST EXTRACTION: Try to pull content between markers if JSON fails
                 $raw = $response['message']['content'] ?? '';
-                // Look for content: "(content)" more aggressively, avoiding premature stops at unescaped quotes
                 if (preg_match('/"content":\s*"(.*?)"\s*(?:,|\})/s', $raw, $matches)) {
                     $aiData['content'] = $matches[1];
                 } else {
-                    // Last resort: Clean the raw string if it looks like the content
                     $aiData['content'] = preg_replace('/^.*?"content":\s*"/s', '', $raw);
                     $aiData['content'] = preg_replace('/",\s*"meta_description".*$/s', '', $aiData['content']);
                     $aiData['content'] = preg_replace('/"}$/s', '', $aiData['content']);
                 }
 
-                // FIX ESCAPED CHARACTERS: Manual unescaping for the most common issues
                 $aiData['content'] = str_replace(['\\n', '\\r'], ["\n", "\r"], $aiData['content']);
                 $aiData['content'] = str_replace('\\"', '"', $aiData['content']);
-                // FIX COMMON MARKDOWN ISSUES: Ensure headers have a newline before them
                 $aiData['content'] = preg_replace('/([^\n])\n(#{1,6}\s)/', "$1\n\n$2", $aiData['content']);
                 $aiData['content'] = preg_replace('/([^\n])(#{1,6}\s)/', "$1\n\n$2", $aiData['content']);
 
@@ -92,6 +88,17 @@ class GenerateBlogPosts extends Command
             ]);
 
             $this->info("Blog post successfully created: " . $post->title);
+
+            // 6. Share to Facebook
+            $this->info("Sharing to Facebook...");
+            $message = "🌟 New Reflection from Samuel: " . $post->title . "\n\n" . $post->meta_description . "\n\nRead more here:";
+            $link = "https://blog.chatwithsamuel.org/" . $post->slug;
+            $fbResponse = $facebook->postToPage($message, $link);
+
+            if ($fbResponse && isset($fbResponse['id'])) {
+                $this->info("Shared to Facebook successfully! (ID: " . $fbResponse['id'] . ")");
+            }
+
             return 0;
 
         } catch (\Exception $e) {
