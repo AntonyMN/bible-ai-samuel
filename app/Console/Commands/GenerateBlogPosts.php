@@ -42,12 +42,19 @@ class GenerateBlogPosts extends Command
 
             // Fallback / Cleaning
             if (!$aiData || empty($aiData['content'])) {
+                Log::error("AI Blog Generation Parse Failure. RAW Response: " . json_encode($response));
+                
+                // HIGHLY ROBUST EXTRACTION: Try to pull content between markers if JSON fails
                 $raw = $response['message']['content'] ?? '';
                 if (preg_match('/"content":\s*"(.*?)"\s*(?:,|\})/s', $raw, $matches)) {
                     $aiData['content'] = $matches[1];
+                } else {
+                    $aiData['content'] = preg_replace('/^.*?"content":\s*"/s', '', $raw);
+                    $aiData['content'] = preg_replace('/",\s*"meta_description".*$/s', '', $aiData['content']);
+                    $aiData['content'] = preg_replace('/"}$/s', '', $aiData['content']);
                 }
-                
-                $aiData['content'] = str_replace(['\\n', '\\r'], ["\n", "\r"], $aiData['content'] ?? '');
+
+                $aiData['content'] = str_replace(['\\n', '\\r'], ["\n", "\r"], $aiData['content']);
                 $aiData['content'] = str_replace('\\"', '"', $aiData['content']);
                 $aiData['title'] = $aiData['title'] ?? "Reflections on " . $topic;
             }
