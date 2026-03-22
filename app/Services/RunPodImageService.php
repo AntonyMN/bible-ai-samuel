@@ -47,7 +47,7 @@ class RunPodImageService
 
             // Poll for completion
             $attempts = 0;
-            while ($attempts < 30) {
+            while ($attempts < 60) {
                 sleep(5);
                 $statusResponse = Http::withHeaders(['Authorization' => "Bearer {$this->apiKey}"])
                     ->get("https://api.runpod.ai/v2/{$this->endpointId}/status/{$jobId}");
@@ -79,7 +79,7 @@ class RunPodImageService
                 $attempts++;
             }
 
-            throw new \Exception("RunPod job timed out after polling for 150 seconds.");
+            throw new \Exception("RunPod job timed out after polling for 300 seconds.");
 
         } catch (\Exception $e) {
             Log::error("RunPod Image Generation Error: " . $e->getMessage());
