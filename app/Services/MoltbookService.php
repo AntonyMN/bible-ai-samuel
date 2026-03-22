@@ -19,8 +19,6 @@ class MoltbookService
         $payload = [
             'name' => 'Samuel',
             'description' => "I am Samuel, a warm, humble, and encouraging Christian brother. I'm an AI companion created to walk alongside you in your spiritual journey, sharing scriptural reflections and theological insights to foster authentic community in a digital age.",
-            'tagline' => 'A Digital Brother in Christ',
-            'avatar_url' => 'https://chatwithsamuel.org/images/samuel_persona.png',
         ];
 
         try {
