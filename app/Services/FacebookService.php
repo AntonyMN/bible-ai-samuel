@@ -24,32 +24,40 @@ class FacebookService
      * @param string $link
      * @return array|null
      */
-    public function postToPage($message, $link)
+    public function postToPage($message, $link = null)
     {
         if (!$this->pageId || !$this->accessToken) {
             Log::warning('Facebook Service: Missing Page ID or Access Token.');
             return null;
         }
 
-        try {
-            $response = Http::post("{$this->baseUrl}/{$this->pageId}/feed", [
-                'message' => $message,
-                'link' => $link,
-                'access_token' => $this->accessToken
-            ]);
+        // Using the URL query for access_token is more robust
+        $url = "https://graph.facebook.com/v21.0/{$this->pageId}/feed?access_token={$this->accessToken}";
+        
+        $payload = [
+            'message' => $message,
+        ];
 
-            if ($response->successful()) {
-                return $response->json();
+        if ($link) {
+            $payload['link'] = $link;
+        }
+
+        try {
+            Log::info("Attempting Facebook post to {$this->pageId}");
+            $response = Http::asJson()->post($url, $payload);
+
+            if ($response->failed()) {
+                Log::error("Facebook Post Failed", [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'url' => $url // Careful with logging tokens, but this is for debugging
+                ]);
+                return null;
             }
 
-            Log::error('Facebook Post Failed', [
-                'status' => $response->status(),
-                'body' => $response->body()
-            ]);
-
-            return null;
+            return $response->json();
         } catch (\Exception $e) {
-            Log::error('Facebook Service Error: ' . $e->getMessage());
+            Log::error("Facebook Service Exception: " . $e->getMessage());
             return null;
         }
     }
