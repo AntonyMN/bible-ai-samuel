@@ -59,15 +59,20 @@ class GenerateBlogPosts extends Command
                 
                 // HIGHLY ROBUST EXTRACTION: Try to pull content between markers if JSON fails
                 $raw = $response['message']['content'] ?? '';
-                if (preg_match('/"content":\s*"(.*?)"/s', $raw, $matches)) {
-                    $aiData['content'] = stripslashes($matches[1]);
-                    $aiData['title'] = $aiData['title'] ?? "Reflections on " . $topic;
+                // Look for content: "(content)" more aggressively, avoiding premature stops at unescaped quotes
+                if (preg_match('/"content":\s*"(.*?)"\s*(?:,|\})/s', $raw, $matches)) {
+                    $aiData['content'] = $matches[1];
                 } else {
                     // Last resort: Clean the raw string if it looks like the content
-                    $aiData['content'] = preg_replace('/^\{.*"content":\s*"/s', '', $raw);
-                    $aiData['content'] = preg_replace('/",\s*"meta_description".*\}$/s', '', $aiData['content']);
-                    $aiData['title'] = "Peace in the Digital Age: A Reflection";
+                    $aiData['content'] = preg_replace('/^.*?"content":\s*"/s', '', $raw);
+                    $aiData['content'] = preg_replace('/",\s*"meta_description".*$/s', '', $aiData['content']);
+                    $aiData['content'] = preg_replace('/"}$/s', '', $aiData['content']);
                 }
+
+                // FIX ESCAPED CHARACTERS: Manual unescaping for the most common issues
+                $aiData['content'] = str_replace(['\\n', '\\r'], ["\n", "\r"], $aiData['content']);
+                $aiData['content'] = str_replace('\\"', '"', $aiData['content']);
+                $aiData['title'] = $aiData['title'] ?? "Reflections on " . $topic;
             }
 
             $aiData['meta_description'] = $aiData['meta_description'] ?? Str::limit(strip_tags($aiData['content'] ?? ''), 150);
