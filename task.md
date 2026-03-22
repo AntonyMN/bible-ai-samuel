@@ -32,4 +32,5 @@
     - [x] Retrieve and verify Page Access Token
     - [x] Automate posting with audio link
 - [x] Refine Samuel's blog persona (brotherly tone vs corporate)
-- [ ] Implement lazy loading for blog audio (`preload="none"`)
+- [x] Implement lazy loading for blog audio (`preload="none"`)
+- [ ] Fix Facebook image sharing (direct photo upload + OG tags)

@@ -16,6 +16,7 @@ I have successfully implemented the automated blogging system for Samuel.ai. Thi
     - [x] Automate posting with audio link
 - [x] Refine Samuel's blog persona (brotherly tone vs corporate)
 - [x] Implement lazy loading for blog audio (`preload="none"`)
+- [x] Fix Facebook image sharing (direct photo upload + OG tags)
 - **Robust Parsing**: Added recovery logic to handle variations in AI-generated JSON responses.
 
 ### 2. AI Image Generation (SDXL)
@@ -58,11 +59,12 @@ Verified that `blog.chatwithsamuel.org` is now served over HTTPS.
     - **Scripture Injection**: Adapting the `ChatController`'s `attachSystematicFootnotes` logic to the `GenerateBlogPosts` command to scan and append BSB scriptures verbatim.
 - **Voiceover Generation**: Integrating `TtsService` using PiperTTS to create wav## Results & Verification
 
-- **Latest Brotherly Reflection**: [Reflections on NEW CHRISTIAN MEDITATION APP](https://blog.chatwithsamuel.org/reflections-on-new-christian-meditation-app-launches-in-175-countries-196)
-- **Voiceover File**: [blog_69c046017171dcf0e301c742.wav](https://chatwithsamuel.org/audio/blog_69c046017171dcf0e301c742.wav) (Brotherly tone verified)
-- **Facebook Post**: [View on Page](https://www.facebook.com/1049473438249397/posts/122096353574917497) (Successfully shared with Page Token)
+- **Latest Reflection**: [Reflections on Faith And Media Summit](https://blog.chatwithsamuel.org/reflections-on-helping-people-of-faith-feel-seen-inside-the-inaugural-faith-and-media-summit-758)
+- **Voiceover File**: [blog_69c04899898e956746036c92.wav](https://chatwithsamuel.org/audio/blog_69c04899898e956746036c92.wav)
+- **Facebook Post**: [View on Page](https://www.facebook.com/1049473438249397/posts/122096355404917497) (Verified with direct photo upload)
 - **Persona Verification**: Confirmed that Samuel now uses "I" and "My dear brothers and sisters" instead of corporate "we".
 - **Performance Optimization**: Implemented `preload="none"` on the audio player in `Show.vue` to prevent 6MB+ WAV files from slowing down initial page loads.
+- **Image Integration**: Switched to Facebook's `/{page_id}/photos` API and added full Open Graph tags to ensure the generated AI image is always visible on social media.
 
 ## Troubleshooting Notes
  Optimization
