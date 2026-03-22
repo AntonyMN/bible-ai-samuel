@@ -18,18 +18,8 @@ class GenerateBlogPosts extends Command
     {
         $this->info("Starting automated blog generation...");
 
-        // 1. Trending Topics (Fetched from my search as an agent)
-        $topics = [
-            "Merging Faith and Holistic Wellness",
-            "The search for meaning in a post-truth world",
-            "Spiritual awakening among Gen Z",
-            "Emotional healing and nervous system regulation through faith",
-            "Authentic community vs algorithm-driven engagement",
-            "Finding peace in an era of rapid technological change",
-        ];
-
-        // 2. Select a topic (random or could be smarter)
-        $topic = $topics[array_rand($topics)];
+        // 1. Fetch Dynamic Topic from Google News RSS
+        $topic = $this->fetchDynamicTopic();
         $this->info("Selected Topic: {$topic}");
 
         // 3. Generate Content using Samuel Persona
@@ -132,5 +122,42 @@ class GenerateBlogPosts extends Command
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    protected function fetchDynamicTopic()
+    {
+        $rssUrl = "https://news.google.com/rss/search?q=Christian+faith+technology+spiritual+wellness&hl=en-US&gl=US&ceid=US:en";
+        
+        try {
+            $rss = simplexml_load_file($rssUrl);
+            if ($rss && isset($rss->channel->item)) {
+                foreach ($rss->channel->item as $item) {
+                    $title = (string) $item->title;
+                    // Strip the source (e.g. "Headline - Source Name")
+                    $title = preg_replace('/ - [^-]+$/', '', $title);
+
+                    // Check if we've already used this topic
+                    if (!Post::where('topic', $title)->exists()) {
+                        return $title;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("RSS Fetch Failed: " . $e->getMessage());
+        }
+
+        // Fallback to curated topics if RSS fails or no new topics
+        $fallbackTopics = [
+            "Merging Faith and Holistic Wellness",
+            "The search for meaning in a post-truth world",
+            "Spiritual awakening among Gen Z",
+            "Emotional healing and nervous system regulation through faith",
+            "Authentic community vs algorithm-driven engagement",
+            "Finding peace in an era of rapid technological change",
+            "The impact of AI on prayer and meditation",
+            "Building digital bridges for spiritual growth",
+        ];
+
+        return $fallbackTopics[array_rand($fallbackTopics)];
     }
 }
