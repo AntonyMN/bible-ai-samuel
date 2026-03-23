@@ -61,6 +61,12 @@ class RunPodImageService
                     $output = $statusJson['output'];
                     $imageUrl = $output['image_url'] ?? $output[0] ?? null;
                     
+                    // If we have a base64 string in imageUrl/output[0], save it
+                    if ($imageUrl && str_starts_with($imageUrl, 'data:image')) {
+                        return $this->saveBase64Image($imageUrl);
+                    }
+
+                    // Fallback to images array if available
                     if (!$imageUrl && isset($output['images'][0])) {
                          return $this->saveBase64Image($output['images'][0]);
                     }
@@ -89,8 +95,19 @@ class RunPodImageService
 
     protected function saveBase64Image($base64String)
     {
+        // Strip data URI prefix if present
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64String)) {
+            $base64String = substr($base64String, strpos($base64String, ',') + 1);
+        }
+
         $image = base64_decode($base64String);
         $filename = 'blog_images/' . Str::random(40) . '.png';
+        
+        // Ensure directory exists
+        if (!Storage::disk('public')->exists('blog_images')) {
+            Storage::disk('public')->makeDirectory('blog_images');
+        }
+
         Storage::disk('public')->put($filename, $image);
         return Storage::url($filename);
     }

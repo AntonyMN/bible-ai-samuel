@@ -109,7 +109,7 @@ class OllamaService
 
         if (!empty($content)) {
             // 1. Kill prompt injection/drift hallucinations (The "Augustus/Nowadays" issue)
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel Blythe|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing).*$/si', '', $content);
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing).*$/si', '', $content);
             
             // 2. Kill leaked Bible version headers
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);

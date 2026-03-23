@@ -20,3 +20,5 @@ Schedule::command('samuel:generate-blog --jitter=90 --evening')
     ->timezone('Africa/Nairobi');
 
 Schedule::command('samuel:cleanup-audio')->daily();
+
+Schedule::command('samuel:check-facebook-token')->daily();

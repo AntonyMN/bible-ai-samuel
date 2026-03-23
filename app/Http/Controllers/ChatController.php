@@ -427,9 +427,9 @@ class ChatController extends Controller
         // Deduplicate footnotes
         $footnotes = array_unique($footnotes);
 
-        $footer = "\n\n---\n\n";
-        foreach ($footnotes as $index => $note) {
-            $footer .= "• " . $note . "\n";
+        $footer = "\n\n---\n\n**Scriptures Reference:**\n\n";
+        foreach ($footnotes as $note) {
+            $footer .= "- " . $note . "\n\n";
         }
 
         return $content . $footer;

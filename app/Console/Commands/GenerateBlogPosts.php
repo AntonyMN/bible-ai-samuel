@@ -105,7 +105,8 @@ class GenerateBlogPosts extends Command
             // 8. Generate Voiceover (TTS)
             $this->info("Generating voiceover...");
             $cleanText = strip_tags($aiData['content']);
-            $cleanText = preg_replace('/###\s+/', '', $cleanText); // Remove markdown headers for speech
+            $cleanText = preg_replace('/###\s+/', '', $cleanText); // Remove markdown headers
+            $cleanText = str_replace('*', '', $cleanText); // Remove bold/italic markers for TTS
             $audioFileName = "blog_" . $post->id . ".wav";
             $audioPath = public_path("audio/" . $audioFileName);
             
@@ -124,7 +125,13 @@ class GenerateBlogPosts extends Command
             $this->info("Sharing to Facebook...");
             $message = "🌟 New Reflection from Samuel: " . $post->title . "\n\n" . $post->meta_description . "\n\nRead more and listen here: " . "https://blog.chatwithsamuel.org/" . $post->slug;
             
-            $fbResponse = $facebook->postPhoto($message, $post->image_url);
+            // Ensure absolute URL for Facebook
+            $absoluteImageUrl = $post->image_url;
+            if (str_starts_with($absoluteImageUrl, '/')) {
+                $absoluteImageUrl = "https://blog.chatwithsamuel.org" . $absoluteImageUrl;
+            }
+
+            $fbResponse = $facebook->postPhoto($message, $absoluteImageUrl);
 
             if ($fbResponse && isset($fbResponse['id'])) {
                 $this->info("Shared to Facebook successfully! (ID: " . $fbResponse['id'] . ")");
@@ -193,9 +200,9 @@ class GenerateBlogPosts extends Command
         }
 
         $footnotes = array_unique($footnotes);
-        $footer = "\n\n---\n\n**Scriptures Reference:**\n";
+        $footer = "\n\n---\n\n**Scriptures Reference:**\n\n";
         foreach ($footnotes as $note) {
-            $footer .= "• " . $note . "\n";
+            $footer .= "- " . $note . "\n\n";
         }
 
         return $content . $footer;
