@@ -25,7 +25,15 @@
     - [x] Configure Facebook service and config [x]
     - [x] Create `FacebookService.php` [x]
     - [x] Implement automatic posting in `GenerateBlogPosts.php` [x]
-    - [ ] Verify test post on Facebook page (Blocked by Token Permissions) [ ]
+    - [x] Automate Facebook Token Expiration Notification <!-- id: 15 -->
+    - [x] Create `samuel:check-facebook-token` command <!-- id: 16 -->
+    - [x] Schedule token check command <!-- id: 17 -->
+- [x] Fix Mobile App 404 Error (`chat/send`) <!-- id: 18 -->
+    - [x] Diagnose missing `api:` route in `bootstrap/app.php` <!-- id: 19 -->
+    - [x] Deploy server-side fix <!-- id: 20 -->
+- [x] Strip asterisks from Chat TTS audio <!-- id: 21 -->
+- [x] Verify all fixes (Facebook, Images, Mobile App, TTS) <!-- id: 9 -->
+    - [x] Verify test post on Facebook page (Blocked by Token Permissions) [x]
 
 **Status:**
 - [x] Enable and verify Facebook Page integration

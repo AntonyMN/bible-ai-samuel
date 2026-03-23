@@ -45,7 +45,9 @@ class TtsController extends Controller
 
         // Check cache
         if (!$disk->exists($relativeFilepath)) {
-            $success = $this->tts->generate($text, $absoluteFilepath);
+            // Strip markdown asterisks for the reader
+            $ttsText = str_replace('*', '', $text);
+            $success = $this->tts->generate($ttsText, $absoluteFilepath);
             
             if (!$success) {
                 return response()->json(['message' => 'Failed to generate speech'], 500);
