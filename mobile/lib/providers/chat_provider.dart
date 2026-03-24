@@ -8,7 +8,7 @@ class ChatProvider extends ChangeNotifier {
   String? _activeConversationId;
   bool _isTyping = false;
   
-  String _selectedModel = 'llama3.2:3b';
+  String _selectedMode = 'fast';
   String _selectedBibleVersion = 'BSB';
   List<dynamic> _conversations = [];
 
@@ -17,12 +17,13 @@ class ChatProvider extends ChangeNotifier {
   List<Message> get messages => _messages;
   String? get activeConversationId => _activeConversationId;
   bool get isTyping => _isTyping;
-  String get selectedModel => _selectedModel;
+  bool get isTyping => _isTyping;
+  String get selectedMode => _selectedMode;
   String get selectedBibleVersion => _selectedBibleVersion;
   List<dynamic> get conversations => _conversations;
 
-  set selectedModel(String value) {
-    _selectedModel = value;
+  set selectedMode(String value) {
+    _selectedMode = value;
     notifyListeners();
   }
 
@@ -62,7 +63,7 @@ class ChatProvider extends ChangeNotifier {
       text, 
       conversationId: _activeConversationId,
       history: _messages.length > 10 ? _messages.sublist(_messages.length - 11, _messages.length - 1) : _messages.sublist(0, _messages.length - 1),
-      model: _selectedModel,
+      mode: _selectedMode,
       bibleVersion: _selectedBibleVersion,
     );
 

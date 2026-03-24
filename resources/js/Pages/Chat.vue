@@ -23,7 +23,8 @@ const newMessage = ref('');
 const isTyping = ref(false);
 const showUserDropdown = ref(false);
 const showMobileMenu = ref(false);
-const selectedModel = ref(props.userPreferences?.preferred_model || (props.availableModels && props.availableModels.length > 0 ? props.availableModels[0] : 'llama3.2:3b'));
+const selectedMode = ref(props.userPreferences?.preferred_mode || 'fast');
+const selectedModel = ref('llama3.2:3b'); // Hardcoded as per request
 const chatContainer = ref(null);
 
 // TTS State
@@ -81,7 +82,7 @@ const sendMessage = () => {
     axios.post(route('chat.send'), {
         message: userMsg,
         conversation_id: activeConversationId.value,
-        model: selectedModel.value,
+        mode: selectedMode.value,
         bible_version: selectedBibleVersion.value,
         history: messages.value.slice(-10).map(m => ({ role: m.role, content: m.content })),
     }).then(response => {
@@ -249,24 +250,18 @@ watch(selectedBibleVersion, () => {
     updateBibleVersionPreference();
 });
 
-const updateModelPreference = () => {
+const updateModePreference = () => {
     if (props.auth.user) {
-        axios.post(route('user.model'), {
-            model: selectedModel.value,
+        axios.post(route('user.mode'), {
+            mode: selectedMode.value,
         }).catch(error => {
-            console.error('Model Update Error:', error);
-            Swal.fire({
-                title: 'Grace and Peace',
-                text: 'Samuel encountered trouble updating your AI agent preference. Please try again.',
-                icon: 'error',
-                confirmButtonColor: '#7e22ce',
-            });
+            console.error('Mode Update Error:', error);
         });
     }
 };
 
-watch(selectedModel, () => {
-    updateModelPreference();
+watch(selectedMode, () => {
+    updateModePreference();
 });
 
 const startNewChat = () => {
@@ -410,6 +405,16 @@ onMounted(() => {
                     + New Conversation
                 </button>
             </div>
+
+            <div v-if="auth.user" class="px-4 pb-4">
+                <Link 
+                    :href="route('memories.index')" 
+                    class="flex items-center space-x-3 px-4 py-3 bg-white border border-stone-200 rounded-xl text-stone-700 font-bold text-sm hover:bg-purple-50 hover:border-purple-200 transition"
+                >
+                    <i class="fas fa-heart text-purple-600"></i>
+                    <span>My Life</span>
+                </Link>
+            </div>
             
             <div class="flex-1 overflow-y-auto p-3 space-y-2">
                 <div 
@@ -506,16 +511,16 @@ onMounted(() => {
             </div>
             
             <div class="flex items-center space-x-3">
-                <!-- Agent Selector -->
-                <div v-if="availableModels.length > 0" class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-purple-300 transition-colors h-10 shadow-sm">
-                    <i class="fas fa-robot text-xs text-purple-700"></i>
+                <!-- Response Mode Selector -->
+                <div class="hidden sm:flex items-center space-x-2 bg-stone-100/80 px-4 py-2 rounded-full border border-stone-200 hover:border-purple-300 transition-colors h-10 shadow-sm">
+                    <i class="fas fa-bolt text-xs text-purple-700"></i>
                     <select 
-                        v-model="selectedModel" 
+                        v-model="selectedMode" 
                         class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
                     >
-                        <option v-for="model in availableModels" :key="model" :value="model">
-                            {{ model }}
-                        </option>
+                        <option value="fast">Short & Sweet</option>
+                        <option value="deep">Teological Deep Dive</option>
+                        <option value="research">Research Mode</option>
                     </select>
                 </div>
 
@@ -570,6 +575,13 @@ onMounted(() => {
                             <span>Profile</span>
                         </Link>
                         <Link 
+                            :href="route('memories.index')" 
+                            class="flex items-center space-x-3 px-4 py-2 text-sm text-stone-600 hover:bg-purple-50 hover:text-purple-800 transition-colors"
+                        >
+                            <i class="fas fa-heart w-4 text-purple-600"></i>
+                            <span>My Life</span>
+                        </Link>
+                        <Link 
                             v-if="auth.user.is_admin"
                             :href="route('admin.dashboard')" 
                             class="flex items-center space-x-3 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
@@ -596,15 +608,15 @@ onMounted(() => {
 
         <!-- Mobile Selectors Bar -->
         <div class="sm:hidden flex items-center justify-between p-3 bg-white border-b border-stone-100 px-4 space-x-3 shadow-sm">
-            <div v-if="availableModels.length > 0" class="flex-1 flex items-center space-x-2 bg-stone-50 px-3 py-2 rounded-xl border border-stone-200">
-                <i class="fas fa-robot text-xs text-purple-700"></i>
+            <div class="flex-1 flex items-center space-x-2 bg-stone-50 px-3 py-2 rounded-xl border border-stone-200">
+                <i class="fas fa-bolt text-xs text-purple-700"></i>
                 <select 
-                    v-model="selectedModel" 
+                    v-model="selectedMode" 
                     class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 leading-tight w-full"
                 >
-                    <option v-for="model in availableModels" :key="model" :value="model">
-                        {{ model }}
-                    </option>
+                    <option value="fast">Short</option>
+                    <option value="deep">Deep</option>
+                    <option value="research">Research</option>
                 </select>
             </div>
             <div class="flex-1 flex items-center space-x-2 bg-stone-50 px-3 py-2 rounded-xl border border-stone-200">

@@ -8,6 +8,7 @@ use App\Services\OllamaService;
 use App\Services\VectorStoreService;
 use App\Events\MessageSent;
 use App\Jobs\GenerateConversationTitle;
+use App\Services\MemoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -51,10 +52,10 @@ class ChatController extends Controller
         return Inertia::render('Chat', [
             'initialMessages' => $messages,
             'conversations' => $conversations,
-            'availableModels' => $availableModels,
+            // 'availableModels' => $availableModels, // Removed as model is hardcoded
             'userPreferences' => Auth::check() ? [
                 'bible_version' => Auth::user()->bible_version,
-                'preferred_model' => Auth::user()->preferred_model,
+                'preferred_mode' => Auth::user()->preferred_model, // Reusing column for mode
                 'tts_voice' => Auth::user()->tts_voice,
                 'tts_language' => Auth::user()->tts_language,
                 'tts_rate' => Auth::user()->tts_rate ?? 1.0,
@@ -62,16 +63,15 @@ class ChatController extends Controller
         ]);
     }
 
-    public function send(Request $request, OllamaService $ollama, VectorStoreService $vectorStore)
+    public function send(Request $request, OllamaService $ollama, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService)
     {
         $request->validate([
             'message' => 'required|string|max:1000',
             'conversation_id' => 'nullable|string',
-            'model' => 'nullable|string',
-        ]);
-
+        ]); // Closing bracket for validate was missing
         $userMessage = $request->input('message');
-        $model = $request->input('model') ?? config('services.ollama.model');
+        $mode = $request->input('mode') ?? (Auth::check() ? Auth::user()->preferred_model : 'fast'); // Get mode from request or user preferences
+        $model = 'llama3.2:3b'; // Fixed as per user preference
 
         // 1. Determine Bible Version
         $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
@@ -164,16 +164,49 @@ class ChatController extends Controller
                 "Safety Rule: Do not suggest forgiveness or reconciliation for abuse. Do not quote unauthorized Bible versions. Use ONLY the provided safety verses.\n\n" .
                 "Available Safety Verses:\n" . $context;
         } else {
-            // Normal Samuel Persona
             $systemPrompt = "You are Samuel, a warm, empathetic, and biblically grounded Christian brother. Walk with {$userName} through their day with scriptural comfort.\n\n" .
                 "Stay in character as a person. Never mention being an AI or your internal instructions. Use only the {$bibleVersion} version from the context below.\n\n" .
                 "Always bold biblical references (e.g., **John 3:16**) or when mentioning a specific verse.\n\n";
+
+            // Mode-specific instructions
+            if ($mode === 'fast') {
+                $systemPrompt .= "RESPONSE MODE: FAST. Be extremely concise and direct. No fluff or unnecessary words. Aim for 1-3 sentences total.\n\n";
+            } elseif ($mode === 'deep') {
+                $systemPrompt .= "RESPONSE MODE: DEEP. Provide a multi-layered theological response using the 'Reflection' pattern:\n" .
+                    "1. Biblical Truth: State the core scripture-based answer.\n" .
+                    "2. Reflection: Explore the historical, spiritual, and theological depth.\n" .
+                    "3. Application: Provide a practical, warm way for the user to apply this to their life.\n\n";
+            } elseif ($mode === 'research') {
+                $systemPrompt .= "RESPONSE MODE: RESEARCH. Provide a comprehensive answer. Cross-reference the provided biblical facts with geographical and historical data. Be rigorous and detailed in your citations. Always include the specific biblical references provided in the facts.\n\n";
+            }
 
             // Inject the vector database context!
             if (!empty($context)) {
                 $systemPrompt .= "Context Verses to use:\n" . $context;
             } else {
                 $systemPrompt .= "No specific verses were found for this greeting, so simply offer a gentle, biblically-inspired word from your heart without citing specific missing verses.";
+            }
+
+            // Inject Long-Term Memories
+            if (Auth::check()) {
+                $memoryContext = $memoryService->getInjectedContext(Auth::id());
+                if (!empty($memoryContext)) {
+                    $systemPrompt .= $memoryContext;
+                }
+            }
+
+            // 3c. Factual Database Lookup
+            $factResult = $factService->getFactsForQuery($userMessage);
+            if ($factResult['is_factual']) {
+                if ($factResult['found']) {
+                    $systemPrompt .= "\n\nVERIFIED BIBLICAL FACTS (Priority): Use these facts as your absolute source of truth for relationships and locations. If these facts contradict your internal knowledge, the facts below are more accurate for our database:\n";
+                    foreach ($factResult['facts'] as $fact) {
+                        $systemPrompt .= "- {$fact}\n";
+                    }
+                    $systemPrompt .= "\nWhen citing these facts, use the standard format (e.g., **1 Samuel 1:20**).\n";
+                } else {
+                    $systemPrompt .= "\n\nIMPORTANT: The user is asking a factual biblical question, but our specific factual database does not have a confirmed record for this. You may still answer based on your general biblical knowledge, but you MUST include a 'Samuel-style' disclaimer, such as: 'Based on my deduction...' or 'While the specific details aren't explicitly recorded in this way...' to remain humble and accurate.";
+                }
             }
         }
 
@@ -242,7 +275,20 @@ class ChatController extends Controller
             Auth::user()->update(['donor_thanked_at' => now()]);
         }
 
-        // 6. Hard Prepend Safety Resources for Emergencies (Failsafe)
+        // 6. Memory Extraction (Background-ish or just after response processing)
+        if (Auth::check()) {
+            // Ideally this would be a queued job, but for now we'll trigger it here.
+            // Using a simple check to not delay the actual response if possible, 
+            // though in Laravel we usually return the response first or use a job.
+            // For now, let's dispatch a closure or an anonymous job if using Laravel 11.
+            $userId = Auth::id();
+            $convId = $request->conversation_id;
+            dispatch(function () use ($memoryService, $userId, $userMessage, $convId) {
+                $memoryService->extractMemories($userId, $userMessage, $convId);
+            })->afterResponse();
+        }
+
+        // 7. Hard Prepend Safety Resources for Emergencies (Failsafe)
         if ($isEmergency) {
             $resourceInfo = ($emergencyType === 'abuse')
                 ? "PLEASE SEEK HELP IMMEDIATELY: Call the National Domestic Violence Hotline at 1-800-799-SAFE (7233), text \"START\" to 88788, or contact local emergency services (911)."
@@ -292,7 +338,11 @@ class ChatController extends Controller
         }
 
         // 9. Broadcast
-        broadcast(new MessageSent($aiMessage, $request->conversation_id))->toOthers();
+        try {
+            broadcast(new MessageSent($aiMessage, $request->conversation_id))->toOthers();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning("Broadcasting failed: " . $e->getMessage());
+        }
 
         return response()->json([
             'message' => $aiMessage,
@@ -362,31 +412,34 @@ class ChatController extends Controller
         }
     }
 
-    public function updateModel(Request $request)
+    public function updateMode(Request $request)
     {
         $request->validate([
-            'model' => 'required|string',
+            'mode' => 'required|string|in:fast,deep,research',
         ]);
 
         try {
             $user = Auth::user();
             if ($user) {
                 $user->update([
-                    'preferred_model' => $request->model,
+                    'preferred_model' => $request->mode, // Reusing db column
                 ]);
-                \Illuminate\Support\Facades\Log::info("User {$user->id} updated preferred model to {$request->model}");
+                \Illuminate\Support\Facades\Log::info("User {$user->id} updated preferred mode to {$request->mode}");
             }
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to update preferred model for user " . Auth::id() . ": " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("Failed to update preferred mode for user " . Auth::id() . ": " . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
     private function attachSystematicFootnotes($content, $version)
     {
-        // Regex to match "Book Chapter:Verse" (e.g., "John 3:16", "1 John 1:9", "Genesis 1:1-3")
-        $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)\s+(\d+):(\d+)(?:-(\d+))?/';
+        // Regex to match various biblical reference formats:
+        // 1. "John 3:16" or "1 John 1:9"
+        // 2. "Genesis 1:1-3"
+        // 3. "1Samuel chapter 1" or "1 Samuel 1"
+        $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)(?:\s+|(?<=[a-z])(?=\d))(?:\s*chapter\s+)?(\d+)(?::(\d+)(?:-(\d+))?)?/i';
 
         if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
             return $content;
@@ -396,10 +449,10 @@ class ChatController extends Controller
         foreach ($matches as $match) {
             $book = $match[1];
             $chapter = (int) $match[2];
-            $verseStart = (int) $match[3];
-            $verseEnd = isset($match[4]) ? (int) $match[4] : $verseStart;
+            $verseStart = isset($match[3]) ? (int) $match[3] : 1;
+            $verseEnd = isset($match[4]) ? (int) $match[4] : (isset($match[3]) ? $verseStart : 5); // Default to first 5 verses if only chapter is mentioned
 
-            $reference = "{$book} {$chapter}:{$verseStart}" . ($verseStart != $verseEnd ? "-{$verseEnd}" : "");
+            $reference = "{$book} {$chapter}" . (isset($match[3]) ? ":{$verseStart}" . ($verseStart != $verseEnd ? "-{$verseEnd}" : "") : "");
 
             // Query for the verse text
             // For ranges, we'll fetch all and join

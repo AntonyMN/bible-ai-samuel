@@ -89,13 +89,13 @@ class ApiService {
     await prefs.remove('auth_token');
   }
 
-  Future<Map<String, dynamic>?> sendMessage(String message, {String? conversationId, List<Message>? history, String? model, String? bibleVersion}) async {
+  Future<Map<String, dynamic>?> sendMessage(String message, {String? conversationId, List<Message>? history, String? mode, String? bibleVersion}) async {
     try {
       final body = jsonEncode({
         'message': message,
         'conversation_id': conversationId,
         'history': history?.map((m) => m.toJson()).toList(),
-        'model': model,
+        'mode': mode,
         'bible_version': bibleVersion,
       });
       print('DEBUG: Sending message to ${Uri.parse('$baseUrl/chat/send')}');

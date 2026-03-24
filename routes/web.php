@@ -63,7 +63,13 @@ Route::middleware('auth')->group(function () {
     // Chat Settings & Preferences
     Route::post('/user/tts-settings', [ChatController::class, 'updateTtsSettings'])->name('user.tts-settings');
     Route::post('/user/bible-version', [ChatController::class, 'updateBibleVersion'])->name('user.bible-version');
-    Route::post('/user/model', [ChatController::class, 'updateModel'])->name('user.model');
+    Route::post('/user/mode', [ChatController::class, 'updateMode'])->name('user.mode');
     Route::patch('/conversations/{id}/title', [ChatController::class, 'updateTitle'])->name('chat.update-title');
+
+    // Memory Management (Inertia)
+    Route::get('/my-life', [\App\Http\Controllers\MemoryController::class, 'index'])->name('memories.index');
+    Route::post('/memories', [\App\Http\Controllers\MemoryController::class, 'store'])->name('memories.store');
+    Route::patch('/memories/{id}', [\App\Http\Controllers\MemoryController::class, 'update'])->name('memories.update');
+    Route::delete('/memories/{id}', [\App\Http\Controllers\MemoryController::class, 'destroy'])->name('memories.destroy');
 });
 

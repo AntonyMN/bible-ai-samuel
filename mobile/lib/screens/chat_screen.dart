@@ -473,22 +473,25 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
-                  value: provider.selectedModel,
+                  value: provider.selectedMode,
                   isExpanded: true,
                   icon: const Icon(Icons.arrow_drop_down, size: 20),
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
                   onChanged: (String? newValue) {
-                    if (newValue != null) provider.selectedModel = newValue;
+                    if (newValue != null) provider.selectedMode = newValue;
                   },
-                  items: <String>['llama3.2:3b', 'llama3.1:8b', 'mistral']
-                      .map<DropdownMenuItem<String>>((String value) {
+                  items: [
+                    {'value': 'fast', 'label': 'Fast', 'icon': Icons.bolt},
+                    {'value': 'deep', 'label': 'Deep', 'icon': Icons.auto_awesome},
+                    {'value': 'research', 'label': 'Research', 'icon': Icons.search},
+                  ].map<DropdownMenuItem<String>>((Map<String, dynamic> mode) {
                     return DropdownMenuItem<String>(
-                      value: value,
+                      value: mode['value'] as String,
                       child: Row(
                         children: [
-                          const Icon(Icons.smart_toy_outlined, size: 14, color: Colors.purple),
+                          Icon(mode['icon'] as IconData, size: 14, color: Colors.purple),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
+                          Expanded(child: Text(mode['label'] as String, overflow: TextOverflow.ellipsis)),
                         ],
                       ),
                     );

@@ -113,6 +113,12 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             $request->user()->currentAccessToken()->delete();
             return response()->json(['message' => 'Logged out']);
         });
+
+        // Memory Management for Mobile
+        Route::get('/memories', [\App\Http\Controllers\MemoryController::class, 'index']);
+        Route::post('/memories', [\App\Http\Controllers\MemoryController::class, 'store']);
+        Route::patch('/memories/{id}', [\App\Http\Controllers\MemoryController::class, 'update']);
+        Route::delete('/memories/{id}', [\App\Http\Controllers\MemoryController::class, 'destroy']);
     });
 
     // Ko-fi Webhook

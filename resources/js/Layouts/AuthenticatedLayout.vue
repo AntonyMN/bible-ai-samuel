@@ -36,6 +36,13 @@ const showingNavigationDropdown = ref(false);
                             >
                                 <i class="fas fa-comment-dots mr-2"></i> Chat
                             </NavLink>
+                            <NavLink
+                                :href="route('memories.index')"
+                                :active="route().current('memories.index')"
+                                class="text-sm font-bold uppercase tracking-widest"
+                            >
+                                <i class="fas fa-heart mr-2 text-purple-600"></i> My Life
+                            </NavLink>
                         </div>
                     </div>
 
@@ -106,6 +113,12 @@ const showingNavigationDropdown = ref(false);
                         :active="route().current('chat.index')"
                     >
                         <i class="fas fa-comment-dots mr-2"></i> Chat
+                    </ResponsiveNavLink>
+                    <ResponsiveNavLink
+                        :href="route('memories.index')"
+                        :active="route().current('memories.index')"
+                    >
+                        <i class="fas fa-heart mr-2 text-purple-600"></i> My Life
                     </ResponsiveNavLink>
                 </div>
 
