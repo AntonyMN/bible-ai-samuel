@@ -519,7 +519,7 @@ onMounted(() => {
                         class="bg-transparent border-none text-xs font-bold text-stone-600 focus:ring-0 cursor-pointer p-0 pr-6 leading-tight h-full"
                     >
                         <option value="fast">Short & Sweet</option>
-                        <option value="deep">Teological Deep Dive</option>
+                        <option value="deep">Theological Deep Dive</option>
                         <option value="research">Research Mode</option>
                     </select>
                 </div>
