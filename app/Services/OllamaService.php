@@ -37,7 +37,7 @@ class OllamaService
         } else {
             try {
                 $rawResponse = Http::timeout(180)->post("{$this->baseUrl}/api/chat", [
-                    'name' => $model ?? $this->model,
+                    'model' => $model ?? $this->model,
                     'messages' => $messages,
                     'stream' => false,
                 ]);
@@ -55,13 +55,36 @@ class OllamaService
 
     protected function runPodChat(array $messages, $model = null, $stop = null)
     {
-        // Construct a standard Llama-style Chat prompt for RunPod
+        $modelName = $model ?? $this->model;
         $prompt = "";
+
+        // Detect if we should use Phi-3 or Llama-3 format
+        $isPhi = str_contains(strtolower($modelName), 'phi');
+
+        // Detect model type for header formatting
+        $isPhi = str_contains(strtolower($modelName), 'phi');
+        $isLlama3 = str_contains(strtolower($modelName), 'llama3');
+
         foreach ($messages as $msg) {
-            $role = ($msg['role'] === 'system') ? 'system' : $msg['role'];
-            $prompt .= "<|start_header_id|>{$role}<|end_header_id|>\n\n{$msg['content']}<|eot_id|>";
+            $role = $msg['role'];
+            if ($isPhi) {
+                $prompt .= "<|{$role}|>\n{$msg['content']}<|end|>\n";
+            } elseif ($isLlama3) {
+                $roleId = ($role === 'system') ? 'system' : $role;
+                $prompt .= "<|start_header_id|>{$roleId}<|end_header_id|>\n\n{$msg['content']}<|eot_id|>";
+            } else {
+                // Default fallback (e.g. ChatML or simple text)
+                $prompt .= "### {$role}:\n{$msg['content']}\n\n";
+            }
         }
-        $prompt .= "<|start_header_id|>assistant<|end_header_id|>\n\n";
+
+        if ($isPhi) {
+            $prompt .= "<|assistant|>\n";
+        } elseif ($isLlama3) {
+            $prompt .= "<|start_header_id|>assistant<|end_header_id|>\n\n";
+        } else {
+            $prompt .= "### Assistant:\n";
+        }
 
         try {
             $response = Http::timeout(120)
@@ -70,12 +93,12 @@ class OllamaService
                     'input' => [
                         'method_name' => 'generate',
                         'input' => [
-                            'model' => $model ?? $this->model,
+                            'model' => $modelName,
                             'prompt' => $prompt,
                             'stream' => false,
-                            'stop' => $stop ?? ["### User:", "### Assistant:", "### System:", "### Instruction:", "<|end|>", "Your task:", "Task:", "Pastor"],
-                            'temperature' => 0.6,
-                            'max_tokens' => 4000,
+                            'stop' => $stop ?? ["<|end|>", "<|eot_id|>", "### User:", "### Assistant:", "### System:", "### Instruction:", "Your task:", "Task:", "Pastor"],
+                            'temperature' => 0.5,
+                            'max_tokens' => 3000,
                         ]
                     ]
                 ]);
@@ -87,8 +110,6 @@ class OllamaService
         }
 
         $json = $response->json();
-        Log::info("RunPod Chat RAW Response: " . json_encode($json));
-        
         return $json['output'] ?? $json;
     }
 
@@ -109,14 +130,14 @@ class OllamaService
 
         if (!empty($content)) {
             // 1. Kill prompt injection/drift hallucinations (The "Augustus/Nowadays" issue)
-            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing).*$/si', '', $content);
+            $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing|Document in a different context|A group of researchers).*$/si', '', $content);
             
             // 2. Kill leaked Bible version headers
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);
             
-            // 3. Kill hallucinated conversation prompts and special tokens (Llama/Mistral)
-            $content = preg_replace('/(<\|.*?\|>|### User:|### Assistant:|### System:|### Instruction:).*/si', '', $content);
-            $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask|Instruction):.*$)/si', '', $content);
+            // 3. Kill hallucinated conversation prompts and special tokens (Llama/Mistral/Phi)
+            $content = preg_replace('/(<\|.*?\|>|### User:|### Assistant:|### System:|### Instruction:|\[\/.*?\]|\[.*?\]:|\[SOL\].*?\[\/SOL\]|\[INST\].*?\[\/INST\]).*/si', '', $content);
+            $content = preg_replace('/(\n(User|Assistant|System|###|Task|Ask|Instruction|Document|Example|Original|Solution):.*$)/si', '', $content);
             
             // 4. Kill standard chat markers and cleanup whitespace
             $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
