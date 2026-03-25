@@ -224,7 +224,6 @@ class ChatController extends Controller
             'success' => true,
             'status' => 'processing',
             'conversation_id' => $convId,
-            'message' => ['role' => 'assistant', 'content' => 'Thinking...']
         ]);
     }
 

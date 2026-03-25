@@ -102,15 +102,17 @@ class OllamaService
                         ]
                     ]
                 ]);
+            
+            $json = $response->json();
+            Log::info("RunPod Response: " . json_encode($json));
+            
             $this->recordSuccess();
+            return $json['output'] ?? $json;
         } catch (\Exception $e) {
             $this->recordFailure();
             Log::error("RunPod Chat HTTP Error: " . $e->getMessage());
             throw $e;
         }
-
-        $json = $response->json();
-        return $json['output'] ?? $json;
     }
 
     /**

@@ -46,9 +46,10 @@ class TrackUsage
         $today = Carbon::today()->toDateString();
         $isAuth = Auth::check();
         
-        $metric = UsageMetric::firstOrCreate(
-            ['date' => $today],
-            [
+        $metric = UsageMetric::where('date', $today)->first();
+        if (!$metric) {
+            $metric = UsageMetric::create([
+                'date' => $today,
                 'authenticated_calls' => 0,
                 'unauthenticated_calls' => 0,
                 'page_views' => 0,
@@ -57,8 +58,8 @@ class TrackUsage
                 'active_users' => [],
                 'countries' => [],
                 'post_views' => []
-            ]
-        );
+            ]);
+        }
 
         // 1. General Request Tracking (Legacy)
         if ($isAuth) {

@@ -86,13 +86,17 @@ const sendMessage = () => {
         bible_version: selectedBibleVersion.value,
         history: messages.value.slice(-10).map(m => ({ role: m.role, content: m.content })),
     }).then(response => {
-        isTyping.value = false;
+        if (response.data.status !== 'processing') {
+            isTyping.value = false;
+        }
+
         const aiMsg = response.data.message;
-        
-        // If not already added by Echo
-        const exists = messages.value.some(m => m.content === aiMsg.content && m.role === 'assistant');
-        if (!exists) {
-            messages.value.push(aiMsg);
+        if (aiMsg) {
+            // If not already added by Echo
+            const exists = messages.value.some(m => m.content === aiMsg.content && m.role === 'assistant');
+            if (!exists) {
+                messages.value.push(aiMsg);
+            }
         }
         
         // Handle new conversation metadata for auth users
@@ -345,6 +349,8 @@ const closeAuthModal = () => {
 onMounted(() => {
     window.Echo.channel('chat')
         .listen('MessageSent', (e) => {
+            isTyping.value = false;
+            
             // Update sidebar timestamp if conversation exists
             if (e.conversation_id) {
                 const conv = sidebarConversations.value.find(c => c.id === e.conversation_id);
@@ -356,11 +362,12 @@ onMounted(() => {
             // Only push if it's the active conversation
             if (e.conversation_id === activeConversationId.value) {
                 if (e.message.role === 'assistant') {
-                    messages.value.push(e.message);
+                    // Check if message already exists (to avoid doubles if HTTP returned immediately)
+                    const exists = messages.value.some(m => m.content === e.message.content && m.role === 'assistant');
+                    if (!exists) {
+                        messages.value.push(e.message);
+                    }
                 }
-            } else {
-                // If user is querying but navigating, we can update the sidebar or a hidden state
-                // For now, let's just ensure it doesn't break the active view
             }
         });
 
