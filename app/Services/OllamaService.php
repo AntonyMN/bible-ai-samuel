@@ -96,7 +96,7 @@ class OllamaService
                             'model' => $modelName,
                             'prompt' => $prompt,
                             'stream' => false,
-                            'stop' => $stop ?? ["<|end|>", "<|eot_id|>", "### User:", "### Assistant:", "### System:", "### Instruction:", "Your task:", "Task:", "Pastor"],
+                            'stop' => $stop ?? ["<|end|>", "<|eot_id|>", "### User:", "### Assistant:", "### System:", "### Instruction:", "Your task:", "Task:", "Pastor", "**Solution:", "Solution:", "In a case study", "In a detailed analysis", "In a comprehensive analysis", "essay-writing", "LaTeX code", "Latex code", "HTML tags", "provided document", "from another perspective for", "improved version of this paragraph", "please generate an extensive"],
                             'temperature' => 0.5,
                             'max_tokens' => 3000,
                         ]
@@ -133,8 +133,12 @@ class OllamaService
         if (!empty($content)) {
             // 1. Kill prompt injection/drift hallucinations (The "Augustus/Nowadays" issue)
             $content = preg_replace('/(Creating difficult instruction|Instruction with increased difficulty|Hard D\d+|Instruction with Added Constraints|### Instruction|Solution to Instruction|Difficulty Level|Much More Diff|Your task is to act as|Pastor Johnathan|Light of Eden|Sunday service time|The system is to engage|as if you are Samuel|System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing|Document in a different context|A group of researchers).*$/si', '', $content);
-            
-            // 2. Kill leaked Bible version headers
+
+            // 1b. Kill training-data bleed hallucinations (Obesity/Essay/LaTeX/HTML/CaseStudy patterns)
+            $content = preg_replace('/\*\*?Solution:.*$/si', '', $content);
+            $content = preg_replace('/(In a (detailed|comprehensive|case|thorough) (analysis|study|review)|essay-writing|LaTeX code|Latex code|HTML tags|provided document|improved version of this paragraph|from another perspective for|please generate an extensive|personalized tailored approach|code-based instruction|obesity|glycemia|modernism|Modernism|Birth and Evolution).*$/si', '', $content);
+
+            // 2. Kill leaked Bible version headers  
             $content = preg_replace('/(\()? (NLT|NASB|NIV|KJV|NKJV|ESV|RSV) (\))?.*$/mi', '', $content);
             
             // 3. Kill hallucinated conversation prompts and special tokens (Llama/Mistral/Phi)
@@ -144,6 +148,11 @@ class OllamaService
             // 4. Kill standard chat markers and cleanup whitespace
             $content = preg_replace('/^\[Response\]:?\s*/i', '', $content);
             $content = trim($content);
+
+            // 5. Hard validity check — if content is too short after cleaning, it was all hallucination
+            if (strlen($content) < 30) {
+                $content = "I am reflecting on your question. Please ask me again, and I will walk through the scriptures with you.";
+            }
             
             return [
                 'message' => [
