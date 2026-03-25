@@ -22,3 +22,5 @@ Schedule::command('samuel:generate-blog --jitter=90 --evening')
 Schedule::command('samuel:cleanup-audio')->daily();
 
 Schedule::command('samuel:check-facebook-token')->daily();
+
+Schedule::command('samuel:ping')->everyFourHours();
