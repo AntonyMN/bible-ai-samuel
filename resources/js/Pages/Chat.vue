@@ -357,11 +357,15 @@ onMounted(() => {
                 if (conv) {
                     conv.updated_at = new Date().toISOString();
                 }
+                // If we have no active conversation yet, accept this as ours (new chat race condition fix)
+                if (!activeConversationId.value) {
+                    activeConversationId.value = e.conversation_id;
+                }
             }
 
-            // Only push if it's the active conversation
-            if (e.conversation_id === activeConversationId.value) {
-                if (e.message.role === 'assistant') {
+            // Show message if it matches active conversation OR activeConversationId was just set above
+            if (!e.conversation_id || e.conversation_id === activeConversationId.value) {
+                if (e.message && e.message.role === 'assistant') {
                     // Check if message already exists (to avoid doubles if HTTP returned immediately)
                     const exists = messages.value.some(m => m.content === e.message.content && m.role === 'assistant');
                     if (!exists) {
