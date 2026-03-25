@@ -133,11 +133,6 @@ class ProcessSamuelResponse implements ShouldQueue
 
         if (empty($footnotes)) return $content;
         $footnotes = array_unique($footnotes);
-        // Limit to 5 footnotes to avoid payload too large errors
-        if (count($footnotes) > 5) {
-            $footnotes = array_slice($footnotes, 0, 5);
-            $footnotes[] = "...and more.";
-        }
         $footer = "\n\n---\n\n**Scriptures Reference:**\n\n- " . implode("\n\n- ", $footnotes) . "\n\n";
         return $content . $footer;
     }
