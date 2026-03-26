@@ -42,8 +42,8 @@
 - [x] Refine Samuel's blog persona (brotherly tone vs corporate)
 - [x] Implement lazy loading for blog audio (`preload="none"`)
 - [x] Fix Facebook image sharing (direct photo upload + OG tags)
-- [ ] Schedule automated blog posts (Morning/Evening)
-    - [ ] Implement jitter and evening-topic logic in `GenerateBlogPosts.php`
-    - [ ] Configure `routes/console.php` schedule
-- [ ] Implement email notifications for blog generation failures
-- [ ] Update production crontab with Laravel scheduler (`schedule:run`)
+- [x] Schedule automated blog posts (Morning/Evening) [x]
+    - [x] Implement jitter and evening-topic logic in `GenerateBlogPosts.php` [x]
+    - [x] Configure `routes/console.php` schedule [x]
+- [x] Implement email notifications for blog generation failures [x]
+- [x] Update production crontab with Laravel scheduler (`schedule:run`) [x]

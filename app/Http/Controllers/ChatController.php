@@ -83,7 +83,7 @@ class ChatController extends Controller
         $context = "";
         $citations = [];
         try {
-            $embedding = $aiService->embed($userMessage, 'nomic-embed-text');
+            $embedding = $aiService->embed($userMessage);
             if (!empty($embedding)) {
                 $searchResults = $vectorStore->query('bible_verses', [$embedding], 5);
                 if (isset($searchResults['documents'][0])) {

@@ -126,31 +126,26 @@ class IngestBibleData extends Command
                             ]);
 
                             // Prepare for Vectorization (Primary Version or Explicit)
+                            // Prepare for Vectorization (Primary Version or Explicit)
                             if (!$this->option('skip-embedding') && ($internalVersion === 'BSB' || $targetVersion)) {
-                                try {
-                                    $embedding = $aiService->embed("{$fullReference} ({$internalVersion}): {$text}");
-                                    
-                                    if (!empty($embedding)) {
-                                        $batchVerses[] = "{$fullReference} ({$internalVersion}): {$text}";
-                                        $batchEmbeddings[] = $embedding;
-                                        $batchMetadatas[] = [
-                                            'book' => $bookName,
-                                            'chapter' => $chapterNum,
-                                            'verse' => $verseNum,
-                                            'reference' => $fullReference,
-                                            'version' => $internalVersion,
-                                        ];
-                                        $batchIds[] = "{$internalVersion}_{$bookName}_{$chapterNum}_{$verseNum}";
-                                    }
-                                } catch (\Exception $e) {
-                                    // Skip embedding if AI service fails
-                                }
+                                $batchVerses[] = "{$fullReference} ({$internalVersion}): {$text}";
+                                $batchMetadatas[] = [
+                                    'book' => $bookName,
+                                    'chapter' => $chapterNum,
+                                    'verse' => $verseNum,
+                                    'reference' => $fullReference,
+                                    'version' => $internalVersion,
+                                ];
+                                $batchIds[] = "{$internalVersion}_{$bookName}_{$chapterNum}_{$verseNum}";
                             }
                         }
 
                         if (!$dryRun && !empty($batchVerses)) {
                             try {
-                                $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $batchEmbeddings);
+                                $batchEmbeddings = $aiService->getEmbeddings($batchVerses);
+                                if (!empty($batchEmbeddings)) {
+                                    $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $batchEmbeddings);
+                                }
                             } catch (\Exception $e) {
                                 // Quiet fail for Chroma
                             }

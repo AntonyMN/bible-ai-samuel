@@ -122,9 +122,12 @@ class GeminiService implements AiServiceInterface
         $model = $model ?? $this->embeddingModel;
         $requests = [];
 
+        // Ensure model name has 'models/' prefix if not present for the payload
+        $payloadModelName = str_starts_with($model, 'models/') ? $model : "models/{$model}";
+
         foreach ($texts as $text) {
             $requests[] = [
-                'model' => "models/{$model}",
+                'model' => $payloadModelName,
                 'content' => [
                     'parts' => [
                         ['text' => $text]
@@ -134,8 +137,10 @@ class GeminiService implements AiServiceInterface
         }
 
         try {
+            // The URL should use the model name directly, not prefixed with 'models/'
+            $urlModelName = str_replace('models/', '', $model);
             $response = Http::timeout(60)
-                ->post("{$this->baseUrl}/{$model}:batchEmbedContents?key={$this->apiKey}", [
+                ->post("{$this->baseUrl}/{$urlModelName}:batchEmbedContents?key={$this->apiKey}", [
                     'requests' => $requests
                 ]);
 
