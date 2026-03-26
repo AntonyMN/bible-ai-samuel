@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\AiServiceInterface;
 use Illuminate\Console\Command;
 
 class PingSamuelCommand extends Command
@@ -23,7 +24,7 @@ class PingSamuelCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(\App\Services\OllamaService $ollama)
+    public function handle(AiServiceInterface $aiService)
     {
         $this->info('Pinging Samuel AI...');
 
@@ -34,7 +35,7 @@ class PingSamuelCommand extends Command
             ];
 
             // Use a specific model if needed, otherwise it defaults
-            $response = $ollama->chat($messages, 'llama3.2:3b');
+            $response = $aiService->chat($messages);
             
             $content = $response['message']['content'] ?? '';
 

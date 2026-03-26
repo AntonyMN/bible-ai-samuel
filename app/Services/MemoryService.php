@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Log;
 
 class MemoryService
 {
-    protected $ollama;
+    protected $aiService;
 
-    public function __construct(OllamaService $ollama)
+    public function __construct(AiServiceInterface $aiService)
     {
-        $this->ollama = $ollama;
+        $this->aiService = $aiService;
     }
 
     /**
@@ -58,7 +58,7 @@ class MemoryService
 
         try {
             $messages = [['role' => 'user', 'content' => $prompt]];
-            $response = $this->ollama->chat($messages, config('services.ollama.model'));
+            $response = $this->aiService->chat($messages, config('services.ollama.model'));
             
             $aiContent = '';
             if (isset($response['message']['content'])) {

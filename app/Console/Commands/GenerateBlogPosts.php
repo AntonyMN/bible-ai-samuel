@@ -3,7 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Post;
-use App\Services\OllamaService;
+use App\Services\AiServiceInterface;
+use App\Services\OllamaService; // Keep for legacy if needed, but we'll use AiServiceInterface
 use App\Services\RunPodImageService;
 use App\Services\FacebookService;
 use App\Services\TtsService;
@@ -17,7 +18,7 @@ class GenerateBlogPosts extends Command
     protected $signature = 'samuel:generate-blog {--jitter=0 : Random delay in minutes} {--evening : Prioritize evening themes}';
     protected $description = 'Generate a new blog post using Samuel persona and RDXL image generation';
 
-    public function handle(OllamaService $ollama, RunPodImageService $runpodImage, FacebookService $facebook, TtsService $tts)
+    public function handle(AiServiceInterface $aiService, RunPodImageService $runpodImage, FacebookService $facebook, TtsService $tts)
     {
         // Handle Jitter
         if ($jitterMax = (int) $this->option('jitter')) {
@@ -53,7 +54,7 @@ class GenerateBlogPosts extends Command
                 ['role' => 'user', 'content' => "Generate the JSON blog post for '{$topic}' now. Flat JSON only."],
             ];
 
-            $response = $ollama->chat($messages, 'llama3.2:3b');
+            $response = $aiService->chat($messages, 'llama3.2:3b');
             $aiData = $this->parseJsonResponse($response);
 
             // Fallback / Cleaning

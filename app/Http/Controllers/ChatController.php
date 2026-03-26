@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Conversation;
 use App\Models\Verse;
-use App\Services\OllamaService;
+use App\Services\AiServiceInterface;
 use App\Services\VectorStoreService;
 use App\Events\MessageSent;
 use App\Jobs\GenerateConversationTitle;
@@ -18,14 +18,14 @@ use Inertia\Inertia;
 
 class ChatController extends Controller
 {
-    public function index(OllamaService $ollama)
+    public function index(AiServiceInterface $aiService)
     {
         $conversations = [];
         $messages = [];
         $availableModels = [];
 
         try {
-            $modelsResponse = $ollama->listModels();
+            $modelsResponse = $aiService->listModels();
             if (isset($modelsResponse['models'])) {
                 foreach ($modelsResponse['models'] as $m) {
                     // Filter out embedding models
@@ -66,7 +66,7 @@ class ChatController extends Controller
         ]);
     }
 
-    public function send(Request $request, OllamaService $ollama, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService)
+    public function send(Request $request, AiServiceInterface $aiService, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService)
     {
         set_time_limit(300); // 5 minutes for deep reflections
         $request->validate([
@@ -83,7 +83,7 @@ class ChatController extends Controller
         $context = "";
         $citations = [];
         try {
-            $embedding = $ollama->embed($userMessage, 'nomic-embed-text');
+            $embedding = $aiService->embed($userMessage, 'nomic-embed-text');
             if (!empty($embedding)) {
                 $searchResults = $vectorStore->query('bible_verses', [$embedding], 5);
                 if (isset($searchResults['documents'][0])) {
@@ -126,7 +126,7 @@ class ChatController extends Controller
         } else {
             $systemPrompt = "You are Samuel, a warm Christian brother. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
             if ($mode === 'fast') {
-                $systemPrompt .= "MODE: FAST. Be extremely concise (1-2 sentences).\n\n";
+                $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences).\n\n";
             } elseif ($mode === 'deep') {
                 $systemPrompt .= "MODE: DEEP. Use Reflection pattern (Truth, Reflection, Application).\n\n";
             } elseif ($mode === 'research') {

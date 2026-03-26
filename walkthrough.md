@@ -98,4 +98,7 @@ Verified that `blog.chatwithsamuel.org` is now served over HTTPS.
 - [x] **Lazy Loading**: Implemented (Blog images now use `loading="lazy"` for better performance).
 - [x] **Persona Alignment**: Corrected (Author name now accurately reflects "Samuel").
 - [x] **Data Remediation**: Success (Manually cleaned up existing posts with JSON and escaping issues).
-- [x] **Deployment**: Complete (Code pushed and built successfully on the live server).
+- [x] Deployment: Complete (Code pushed and built successfully on the live server).
+- [x] Gemini Migration: Unified 'thinking' part under `AiServiceInterface` and moved to Google AI Studio.
+- [x] Infrastructure Register: Created `INFRASTRUCTURE_REGISTER.md` to track services.
+- [x] Response Modes: Updated 'Short and Sweet' mode to target 5-6 sentences in `ChatController.php`.

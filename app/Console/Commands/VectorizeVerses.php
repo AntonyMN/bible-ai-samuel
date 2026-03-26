@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Verse;
-use App\Services\OllamaService;
+use App\Services\AiServiceInterface;
 use App\Services\VectorStoreService;
 use App\Jobs\VectorizeVerseJob;
 use Illuminate\Console\Command;
@@ -27,7 +27,7 @@ class VectorizeVerses extends Command
     /**
      * Execute the console command.
      */
-    public function handle(OllamaService $ollama, VectorStoreService $vectorStore)
+    public function handle(AiServiceInterface $aiService, VectorStoreService $vectorStore)
     {
         $version = $this->option('bible-version');
         $chunkSize = (int) $this->option('chunk');
@@ -77,7 +77,7 @@ class VectorizeVerses extends Command
         $progressBar->start();
 
         Verse::where('version', $version)
-            ->chunk($chunkSize, function ($verses) use ($ollama, $vectorStore, $progressBar, $version) {
+            ->chunk($chunkSize, function ($verses) use ($aiService, $vectorStore, $progressBar, $version) {
                 $batchVerses = [];
                 $batchMetadatas = [];
                 $batchIds = [];
@@ -96,7 +96,7 @@ class VectorizeVerses extends Command
 
                 if (!empty($batchVerses)) {
                     try {
-                        $embeddings = $ollama->getEmbeddings($batchVerses);
+                        $embeddings = $aiService->getEmbeddings($batchVerses);
                         if ($embeddings) {
                             $vectorStore->addDocuments('bible_verses', $batchVerses, $batchMetadatas, $batchIds, $embeddings);
                         }

@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Verse;
+use App\Services\AiServiceInterface;
+use App\Services\VectorStoreService;
 use Illuminate\Console\Command;
 
 class IngestBibleData extends Command
@@ -42,8 +45,8 @@ class IngestBibleData extends Command
      */
     public function handle()
     {
-        $ollama = app(\App\Services\OllamaService::class);
-        $vectorStore = app(\App\Services\VectorStoreService::class);
+        $aiService = app(AiServiceInterface::class);
+        $vectorStore = app(VectorStoreService::class);
         
         $this->info("Handle started for wldeh/bible-api source");
         $targetVersion = $this->option('bible-version');
@@ -97,6 +100,7 @@ class IngestBibleData extends Command
                         $batchEmbeddings = [];
                         $batchMetadatas = [];
                         $batchIds = [];
+                        $textsToEmbed = [];
 
                         foreach ($data['data'] as $verseData) {
                             $bookName = $verseData['book'];
@@ -111,7 +115,7 @@ class IngestBibleData extends Command
                             }
 
                             // Store in MongoDB
-                            \App\Models\Verse::updateOrCreate([
+                            Verse::updateOrCreate([
                                 'version' => $internalVersion,
                                 'book' => $bookName,
                                 'chapter' => $chapterNum,
@@ -121,25 +125,25 @@ class IngestBibleData extends Command
                                 'full_reference' => $fullReference,
                             ]);
 
-                            // Vectorization (Primary Version or Explicit)
+                            // Prepare for Vectorization (Primary Version or Explicit)
                             if (!$this->option('skip-embedding') && ($internalVersion === 'BSB' || $targetVersion)) {
                                 try {
-                                    $embedding = $ollama->embed("{$fullReference} ({$internalVersion}): {$text}");
+                                    $embedding = $aiService->embed("{$fullReference} ({$internalVersion}): {$text}");
                                     
                                     if (!empty($embedding)) {
                                         $batchVerses[] = "{$fullReference} ({$internalVersion}): {$text}";
                                         $batchEmbeddings[] = $embedding;
                                         $batchMetadatas[] = [
-                                            'version' => $internalVersion,
                                             'book' => $bookName,
                                             'chapter' => $chapterNum,
                                             'verse' => $verseNum,
                                             'reference' => $fullReference,
+                                            'version' => $internalVersion,
                                         ];
                                         $batchIds[] = "{$internalVersion}_{$bookName}_{$chapterNum}_{$verseNum}";
                                     }
                                 } catch (\Exception $e) {
-                                    // Skip embedding if ollama/chroma fails
+                                    // Skip embedding if AI service fails
                                 }
                             }
                         }

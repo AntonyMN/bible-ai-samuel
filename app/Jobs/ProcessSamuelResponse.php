@@ -4,7 +4,7 @@ namespace App\Jobs;
 
 use App\Events\MessageSent;
 use App\Models\Conversation;
-use App\Services\OllamaService;
+use App\Services\AiServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -45,11 +45,11 @@ class ProcessSamuelResponse implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(OllamaService $ollama): void
+    public function handle(AiServiceInterface $aiService): void
     {
         try {
             // 1. Call AI
-            $response = $ollama->chat($this->messages, $this->model);
+            $response = $aiService->chat($this->messages, $this->model);
             $aiContent = $response['message']['content'] ?? 'Peace be with you. I am having a moment of silence...';
 
             // 2. Donor Thank You (Failsafe)

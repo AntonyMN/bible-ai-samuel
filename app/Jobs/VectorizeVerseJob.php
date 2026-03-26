@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\VectorStoreService;
-use App\Services\OllamaService;
+use App\Services\AiServiceInterface;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -37,12 +37,12 @@ class VectorizeVerseJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(OllamaService $ollama, VectorStoreService $vectorStore): void
+    public function handle(AiServiceInterface $aiService, VectorStoreService $vectorStore): void
     {
         try {
             Log::info("Vectorizing batch of " . count($this->ids) . " verses for {$this->bibleVersion}");
 
-            $embeddings = $ollama->getEmbeddings($this->verses);
+            $embeddings = $aiService->getEmbeddings($this->verses);
 
             if (empty($embeddings)) {
                 throw new \Exception("Failed to generate embeddings for batch in {$this->bibleVersion}");

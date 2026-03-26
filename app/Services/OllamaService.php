@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class OllamaService
+class OllamaService implements AiServiceInterface
 {
     protected $baseUrl;
     protected $model;
