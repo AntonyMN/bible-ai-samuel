@@ -51,7 +51,7 @@ class GenerateConversationTitle implements ShouldQueue
             ['role' => 'user', 'content' => $this->firstMessage],
         ];
 
-        $response = $aiService->chat($messages, config('services.ollama.model'));
+        $response = $aiService->chat($messages);
         $title = $response['message']['content'] ?? 'Divine Reflection';
         
         // Clean up common AI conversational prefixing

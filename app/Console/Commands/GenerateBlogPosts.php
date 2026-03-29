@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 
 class GenerateBlogPosts extends Command
 {
-    protected $signature = 'samuel:generate-blog {--jitter=0 : Random delay in minutes} {--evening : Prioritize evening themes}';
+    protected $signature = 'samuel:generate-blog {--jitter=0 : Random delay in minutes} {--evening : Prioritize evening themes} {--dry-run : Generate but do not save or post}';
     protected $description = 'Generate a new blog post using Samuel persona and RDXL image generation';
 
     public function handle(AiServiceInterface $aiService, RunPodImageService $runpodImage, FacebookService $facebook, TtsService $tts)
@@ -54,7 +54,7 @@ class GenerateBlogPosts extends Command
                 ['role' => 'user', 'content' => "Generate the JSON blog post for '{$topic}' now. Flat JSON only."],
             ];
 
-            $response = $aiService->chat($messages, 'llama3.2:3b');
+            $response = $aiService->chat($messages);
             $aiData = $this->parseJsonResponse($response);
 
             // Fallback / Cleaning
@@ -92,6 +92,18 @@ class GenerateBlogPosts extends Command
             $imageUrl = $runpodImage->generateImage($aiData['image_prompt']);
             
             // 7. Save to Database
+            if ($this->option('dry-run')) {
+                $this->info("Dry run: Content and Image generated successfully.");
+                $this->info("Testing TTS generation...");
+                $cleanText = strip_tags($aiData['content']);
+                $tempAudioPath = storage_path("app/public/audio/dry_run_test.wav");
+                if ($tts->generate($cleanText, $tempAudioPath)) {
+                    $this->info("Dry run: TTS generated successfully at {$tempAudioPath}");
+                }
+                $this->info("Dry run complete. No data permanently saved or posted to Facebook.");
+                return 0;
+            }
+
             $post = Post::create([
                 'title' => $aiData['title'],
                 'slug' => Str::slug($aiData['title']) . '-' . rand(100, 999), 

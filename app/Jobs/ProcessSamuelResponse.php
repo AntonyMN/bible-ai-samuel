@@ -17,7 +17,7 @@ class ProcessSamuelResponse implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $messages;
-    public $model;
+    public ?string $model;
     public $conversationId;
     public $userId;
     public $bibleVersion;
@@ -29,7 +29,7 @@ class ProcessSamuelResponse implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(array $messages, string $model, string $conversationId, ?string $userId, string $bibleVersion, array $citations, bool $isEmergency = false, string $emergencyType = '', bool $isNewDonor = false)
+    public function __construct(array $messages, ?string $model, string $conversationId, ?string $userId, string $bibleVersion, array $citations, bool $isEmergency = false, string $emergencyType = '', bool $isNewDonor = false)
     {
         $this->messages = $messages;
         $this->model = $model;

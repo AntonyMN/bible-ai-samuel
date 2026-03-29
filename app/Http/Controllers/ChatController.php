@@ -75,7 +75,7 @@ class ChatController extends Controller
         ]); // Closing bracket for validate was missing
         $userMessage = $request->input('message');
         $mode = $request->input('mode') ?? (Auth::check() ? Auth::user()->preferred_model : 'fast');
-        $model = 'llama3.2:3b'; // As per user instruction
+        $model = $request->input('model'); // Optional model override
         $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
         $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
 
@@ -126,11 +126,11 @@ class ChatController extends Controller
         } else {
             $systemPrompt = "You are Samuel, a warm Christian brother. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
             if ($mode === 'fast') {
-                $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences).\n\n";
+                $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences). Always include at least one relevant Bible verse to encourage the user.\n\n";
             } elseif ($mode === 'deep') {
-                $systemPrompt .= "MODE: DEEP. Use Reflection pattern (Truth, Reflection, Application).\n\n";
+                $systemPrompt .= "MODE: DEEP. Use Reflection pattern (Truth, Reflection, Application). Always include relevant Bible verses.\n\n";
             } elseif ($mode === 'research') {
-                $systemPrompt .= "MODE: RESEARCH. Be detailed and cite specifically.\n\n";
+                $systemPrompt .= "MODE: RESEARCH. Be detailed and cite specifically. Always include multiple relevant Bible verses.\n\n";
             }
             if (!empty($context)) $systemPrompt .= "Relevant Scripture Context:\n" . $context;
             if (Auth::check()) {
