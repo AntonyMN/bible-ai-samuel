@@ -17,7 +17,6 @@ class ChatProvider extends ChangeNotifier {
   List<Message> get messages => _messages;
   String? get activeConversationId => _activeConversationId;
   bool get isTyping => _isTyping;
-  bool get isTyping => _isTyping;
   String get selectedMode => _selectedMode;
   String get selectedBibleVersion => _selectedBibleVersion;
   List<dynamic> get conversations => _conversations;

@@ -481,9 +481,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     if (newValue != null) provider.selectedMode = newValue;
                   },
                   items: [
-                    {'value': 'fast', 'label': 'Fast', 'icon': Icons.bolt},
-                    {'value': 'deep', 'label': 'Deep', 'icon': Icons.auto_awesome},
-                    {'value': 'research', 'label': 'Research', 'icon': Icons.search},
+                    {'value': 'fast', 'label': 'Short and Sweet', 'icon': Icons.bolt},
+                    {'value': 'deep', 'label': 'Deep Reflection', 'icon': Icons.auto_awesome},
+                    {'value': 'research', 'label': 'Research Mode', 'icon': Icons.search},
                   ].map<DropdownMenuItem<String>>((Map<String, dynamic> mode) {
                     return DropdownMenuItem<String>(
                       value: mode['value'] as String,

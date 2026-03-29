@@ -8,7 +8,6 @@ use App\Services\AiServiceInterface;
 use App\Services\VectorStoreService;
 use App\Events\MessageSent;
 use App\Jobs\GenerateConversationTitle;
-use App\Jobs\ProcessSamuelResponse;
 use App\Services\MemoryService;
 use App\Services\BibleFactService;
 use Illuminate\Http\Request;
@@ -124,13 +123,13 @@ class ChatController extends Controller
             $resourceInfo = ($emergencyType === 'abuse') ? 'Domestic Violence Hotline (1-800-799-SAFE)' : 'Suicide Prevention Lifeline (988)';
             $systemPrompt = "You are Samuel. EMERGENCY: Provide this resource FIRST: {$resourceInfo}. Use these verses: " . $context;
         } else {
-            $systemPrompt = "You are Samuel, a warm Christian brother. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
+            $systemPrompt = "You are Samuel, a warm Christian brother. My friend's name is {$userName}. Address them by name occasionally. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
             if ($mode === 'fast') {
-                $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences). Always include at least one relevant Bible verse to encourage the user.\n\n";
+                $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences). Always include at least one relevant Bible verse to encourage {$userName}.\n\n";
             } elseif ($mode === 'deep') {
-                $systemPrompt .= "MODE: DEEP. Use Reflection pattern (Truth, Reflection, Application). Always include relevant Bible verses.\n\n";
+                $systemPrompt .= "MODE: DEEP. Use Reflection pattern (Truth, Reflection, Application). Always include relevant Bible verses to help {$userName} grow.\n\n";
             } elseif ($mode === 'research') {
-                $systemPrompt .= "MODE: RESEARCH. Be detailed and cite specifically. Always include multiple relevant Bible verses.\n\n";
+                $systemPrompt .= "MODE: RESEARCH. Be detailed and cite specifically. Always include multiple relevant Bible verses for {$userName}'s study.\n\n";
             }
             if (!empty($context)) $systemPrompt .= "Relevant Scripture Context:\n" . $context;
             if (Auth::check()) {
@@ -207,24 +206,64 @@ class ChatController extends Controller
             $convId = "guest_" . Str::random(10);
         }
 
-        // 5. Dispatch Asynchronous Job
-        ProcessSamuelResponse::dispatch(
-            $messages,
-            $model,
-            $convId,
-            Auth::check() ? (string) Auth::id() : null,
-            $bibleVersion,
-            $citations,
-            $isEmergency,
-            $emergencyType,
-            $isNewDonor
-        );
+        // 5. Call AI Service Synchronously
+        try {
+            $response = $aiService->chat($messages, $model);
+            $aiContent = $response['message']['content'] ?? 'Peace be with you. I am having a moment of silence...';
 
-        return response()->json([
-            'success' => true,
-            'status' => 'processing',
-            'conversation_id' => $convId,
-        ]);
+            // Donor Thank You
+            if ($isNewDonor) {
+                if (stripos($aiContent, "thank") === false && stripos($aiContent, "donat") === false) {
+                    $aiContent = "I want to start by expressing my deepest gratitude for your kind support. Thank you for your donation, it helps me stay online and serve the brothers and sisters. " . $aiContent;
+                }
+            }
+
+            // Attach Footnotes
+            $aiContent = $this->attachSystematicFootnotes($aiContent, $bibleVersion);
+
+            // Emergency Failsafe
+            if ($isEmergency) {
+                $resourceInfo = ($emergencyType === 'abuse')
+                    ? "PLEASE SEEK HELP IMMEDIATELY: Call 1-800-799-SAFE or local emergency services."
+                    : "PLEASE SEEK HELP IMMEDIATELY: Call 988 or local emergency services.";
+                if (stripos($aiContent, "988") === false && stripos($aiContent, "Hotline") === false) {
+                    $aiContent = $resourceInfo . "\n\n" . $aiContent;
+                }
+            }
+
+            $aiMessage = [
+                'role' => 'assistant',
+                'content' => $aiContent,
+                'citations' => $citations,
+            ];
+
+            // 6. Save to Database
+            if ($conversation) {
+                $currentMessages = $conversation->messages;
+                $currentMessages[] = $aiMessage;
+                $conversation->update(['messages' => $currentMessages]);
+            }
+
+            // 7. Broadcast for other clients/web
+            broadcast(new \App\Events\MessageSent($aiMessage, $convId));
+
+            return response()->json([
+                'success' => true,
+                'message' => $aiMessage,
+                'conversation_id' => $convId,
+            ]);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Samuel Chat Sync failed: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => [
+                    'role' => 'assistant',
+                    'content' => "I am sorry, something went wrong. Please reach out again.",
+                ],
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function show($id)
