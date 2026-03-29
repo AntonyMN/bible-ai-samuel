@@ -165,34 +165,45 @@ onMounted(() => {
             </div>
         </section>
 
-        <!-- Features / Versions -->
-        <section id="versions" class="py-24 px-6 bg-stone-100/50">
+        <!-- Features / Response Modes -->
+        <section id="features" class="py-24 px-6 bg-stone-100/50">
             <div class="max-w-6xl mx-auto text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4 font-['Gentium_Book_Plus']">Choose Your Agent</h2>
-                <p class="text-stone-600 max-w-xl mx-auto">Samuel leverages state-of-the-art open source models optimized for serverless performance.</p>
+                <h2 class="text-4xl font-bold mb-4 font-['Gentium_Book_Plus']">Tailored Response Modes</h2>
+                <p class="text-stone-600 max-w-xl mx-auto">Samuel adapts his wisdom to your needs, whether you seek a quick word of encouragement or a deep theological study.</p>
             </div>
             
-            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <!-- Llama 3.2 3B -->
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <!-- Short and Sweet -->
                 <div class="bg-white p-8 rounded-[40px] shadow-sm border border-stone-200 hover:shadow-xl transition-all group">
                     <div class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 mb-6 group-hover:bg-purple-700 group-hover:text-white transition-colors">
-                        <i class="fas fa-bolt"></i>
+                        <i class="fas fa-comment-dots"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 font-['Gentium_Book_Plus']">Llama 3.2 3B</h3>
-                    <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-4">Lightweight & Fast</p>
-                    <p class="text-stone-600 mb-6">Optimized for quick encouraging words, daily verses, and rapid spiritual reflections. Provides a balance of speed and clarity.</p>
-                    <div class="text-sm text-stone-400 italic">Ideal for: Daily check-ins, prayer requests.</div>
+                    <h3 class="text-2xl font-bold mb-2 font-['Gentium_Book_Plus']">Short and Sweet</h3>
+                    <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-4">Encouraging & Quick</p>
+                    <p class="text-stone-600 mb-6">Concise, 5-6 sentence responses focused on immediate comfort, daily strength, and rapid scriptural reminders.</p>
+                    <div class="text-sm text-stone-400 italic">Ideal for: Busy mornings, quick check-ins, or a word of peace.</div>
                 </div>
 
-                <!-- Llama 3.1 8B -->
+                <!-- Deep Reflection -->
                 <div class="bg-white p-8 rounded-[40px] shadow-sm border border-stone-200 hover:shadow-xl transition-all group">
                     <div class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 mb-6 group-hover:bg-purple-700 group-hover:text-white transition-colors">
-                        <i class="fas fa-brain"></i>
+                        <i class="fas fa-scroll"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-2 font-['Gentium_Book_Plus']">Llama 3.1 8B</h3>
-                    <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-4">Deep Theological Nuance</p>
-                    <p class="text-stone-600 mb-6">Our flagship agent for deep study, historical context, and complex theological discussions. Exceptional reasoning capabilities.</p>
-                    <div class="text-sm text-stone-400 italic">Ideal for: Bible study, doctrinal questions.</div>
+                    <h3 class="text-2xl font-bold mb-2 font-['Gentium_Book_Plus']">Deep Reflection</h3>
+                    <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-4">Spiritual Growth</p>
+                    <p class="text-stone-600 mb-6">A balanced approach using the Truth, Reflection, and Application pattern to help you internalize the Word.</p>
+                    <div class="text-sm text-stone-400 italic">Ideal for: Personal devotion, searching for meaning, and prayerful study.</div>
+                </div>
+
+                <!-- Research Mode -->
+                <div class="bg-white p-8 rounded-[40px] shadow-sm border border-stone-200 hover:shadow-xl transition-all group">
+                    <div class="w-12 h-12 bg-stone-100 rounded-2xl flex items-center justify-center text-stone-600 mb-6 group-hover:bg-purple-700 group-hover:text-white transition-colors">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2 font-['Gentium_Book_Plus']">Research Mode</h3>
+                    <p class="text-xs font-bold text-purple-700 uppercase tracking-widest mb-4">Scholarly Depth</p>
+                    <p class="text-stone-600 mb-6">In-depth analysis with extensive cross-references, historical context, and original language insights for serious students.</p>
+                    <div class="text-sm text-stone-400 italic">Ideal for: Sermon prep, theological research, and deep dive study.</div>
                 </div>
             </div>
         </section>
