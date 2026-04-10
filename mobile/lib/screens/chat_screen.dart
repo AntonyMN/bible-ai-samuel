@@ -33,6 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _initSpeech();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().loadConversations();
+      context.read<ChatProvider>().loadPreferences();
     });
   }
 
@@ -217,6 +218,25 @@ class _ChatScreenState extends State<ChatScreen> {
                           const SizedBox(height: 16),
                           Text('Peace be with you.', 
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontStyle: FontStyle.italic, color: Colors.grey[600])),
+                          if (authProvider.isAuthenticated) ...[
+                            const SizedBox(height: 32),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 32),
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.palette),
+                                label: Text('Give me a spiritual image... (${chatProvider.remainingImages} left)'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  foregroundColor: Colors.purple[700],
+                                  side: BorderSide(color: Colors.purple[200]!),
+                                ),
+                                onPressed: chatProvider.remainingImages > 0 
+                                  ? () => _send(chatProvider, customText: "Samuel, please create a spiritual image for me about God's grace.")
+                                  : null,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     )
@@ -502,11 +522,12 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void _send(ChatProvider provider) {
-    if (_controller.text.trim().isEmpty) return;
+  void _send(ChatProvider provider, {String? customText}) {
+    final text = customText ?? _controller.text;
+    if (text.trim().isEmpty) return;
     if (_isListening) _stopListening();
-    provider.sendMessage(_controller.text);
-    _controller.clear();
+    provider.sendMessage(text);
+    if (customText == null) _controller.clear();
     _scrollToBottom();
   }
 
@@ -618,6 +639,32 @@ class _ChatScreenState extends State<ChatScreen> {
               Navigator.pop(context);
             },
           ),
+          if (Provider.of<AuthProvider>(context, listen: false).isAuthenticated)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.between,
+                    children: [
+                      const Text('Spiritual Images', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                      Text('${provider.remainingImages}/3 left', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: provider.remainingImages > 0 ? Colors.purple : Colors.red)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: provider.remainingImages / 3,
+                      backgroundColor: Colors.grey[200],
+                      color: Colors.purple,
+                      minHeight: 8,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           const Divider(),
           Expanded(
             child: provider.conversations.isEmpty

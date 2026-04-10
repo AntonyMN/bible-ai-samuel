@@ -102,6 +102,7 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
         });
 
         Route::patch('/user/profile', [ChatController::class, 'updateProfile']);
+        Route::get('/user/preferences', [ChatController::class, 'getPreferences']);
 
         Route::get('/conversations', function (Request $request) {
             return \App\Models\Conversation::where('user_id', (string) $request->user()->id)

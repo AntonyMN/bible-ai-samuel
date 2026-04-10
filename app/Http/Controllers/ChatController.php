@@ -419,6 +419,18 @@ class ChatController extends Controller
         }
     }
 
+    public function getPreferences()
+    {
+        return response()->json([
+            'bible_version' => Auth::user()->bible_version,
+            'preferred_mode' => Auth::user()->preferred_model, // Reusing column for mode
+            'tts_voice' => Auth::user()->tts_voice,
+            'tts_language' => Auth::user()->tts_language,
+            'tts_rate' => Auth::user()->tts_rate ?? 1.0,
+            'remaining_images' => $this->getRemainingImages(Auth::user()),
+        ]);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = Auth::user();

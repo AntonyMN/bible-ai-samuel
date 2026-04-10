@@ -11,6 +11,7 @@ class ChatProvider extends ChangeNotifier {
   String _selectedMode = 'fast';
   String _selectedBibleVersion = 'BSB';
   List<dynamic> _conversations = [];
+  int _remainingImages = 0;
 
   ChatProvider(this._apiService);
 
@@ -20,6 +21,7 @@ class ChatProvider extends ChangeNotifier {
   String get selectedMode => _selectedMode;
   String get selectedBibleVersion => _selectedBibleVersion;
   List<dynamic> get conversations => _conversations;
+  int get remainingImages => _remainingImages;
 
   set selectedMode(String value) {
     _selectedMode = value;
@@ -34,6 +36,16 @@ class ChatProvider extends ChangeNotifier {
   Future<void> loadConversations() async {
     _conversations = await _apiService.getConversations();
     notifyListeners();
+  }
+
+  Future<void> loadPreferences() async {
+    final prefs = await _apiService.getPreferences();
+    if (prefs != null) {
+      if (prefs['bible_version'] != null) _selectedBibleVersion = prefs['bible_version'];
+      if (prefs['preferred_mode'] != null) _selectedMode = prefs['preferred_mode'];
+      if (prefs['remaining_images'] != null) _remainingImages = prefs['remaining_images'];
+      notifyListeners();
+    }
   }
 
   Future<void> selectConversation(String id) async {
@@ -78,6 +90,9 @@ class ChatProvider extends ChangeNotifier {
       if (result['conversation_id'] != null && _activeConversationId == null) {
         _activeConversationId = result['conversation_id'].toString();
         loadConversations(); // Refresh list on new conversation
+      }
+      if (result['remaining_images'] != null) {
+        _remainingImages = result['remaining_images'];
       }
     } else {
       // Mark last message as failed

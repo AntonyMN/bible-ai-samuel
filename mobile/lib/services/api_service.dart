@@ -179,6 +179,18 @@ class ApiService {
     return [];
   }
 
+  Future<Map<String, dynamic>?> getPreferences() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/user/preferences'), headers: _headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching preferences: $e');
+    }
+    return null;
+  }
+
   Future<bool> deleteMemory(String id) async {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/memories/$id'), headers: _headers);
