@@ -14,11 +14,12 @@ const props = defineProps({
     conversations: Array,
     availableModels: Array,
     userPreferences: Object,
+    conversationId: [Number, String, null],
 });
 
 const messages = ref(props.initialMessages || []);
 const sidebarConversations = ref(props.conversations || []);
-const activeConversationId = ref(null);
+const activeConversationId = ref(props.conversationId || null);
 const newMessage = ref('');
 const isTyping = ref(false);
 const typingStatus = ref('Samuel is searching the scriptures for you...');
@@ -337,6 +338,14 @@ watch(messages, () => {
 }, { deep: true });
 
 watch(activeConversationId, () => {
+    // Listen for status updates on the conversation-specific channel
+    const statusChannel = `status.${props.conversationId || 'new'}`;
+    window.Echo.channel(statusChannel)
+        .listen('.MessageStatusUpdated', (e) => {
+            console.log('Status update received:', e);
+            typingStatus.value = e.status;
+            isTyping.value = true;
+        });
     scrollToBottom();
 });
 

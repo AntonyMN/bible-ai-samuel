@@ -32,8 +32,9 @@ class MessageStatusUpdated implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
+        // Use a public channel for the conversation so guests can also see status updates
         return [
-            new PrivateChannel('user.' . $this->userId),
+            new Channel("status.{$this->conversationId}"),
         ];
     }
 }

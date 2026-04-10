@@ -34,11 +34,14 @@ User Query: \"$message\"
 Intention:";
 
         try {
+            Log::info("Intention Prompt Sent to Gemini. Model: gemini-flash-latest");
             $response = $this->aiService->chat([
                 ['role' => 'user', 'content' => $prompt]
             ], 'gemini-flash-latest');
 
-            $intention = strtolower(trim($response['content'] ?? 'reflection'));
+            $rawContent = $response['content'] ?? 'reflection';
+            Log::info("Raw Intention Response: " . $rawContent);
+            $intention = strtolower(trim($rawContent));
             
             // Cleanup in case LLM is chatty
             if (str_contains($intention, 'image')) return 'image';

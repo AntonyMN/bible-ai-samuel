@@ -13,6 +13,7 @@ use App\Services\IntentClassificationService;
 use App\Events\MessageStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ChatController extends Controller
@@ -71,10 +72,14 @@ class ChatController extends Controller
         $userMessage = $request->input('message');
 
         // 1. Clarify Intention
-        if ($isLoggedIn) {
-            broadcast(new MessageStatusUpdated($user->id, "Samuel is clarifying your intention...", $request->input('conversation_id')))->toOthers();
-        }
+        $conversationId = $request->input('conversation_id', 'new');
+        
+        // Broadcast status to everyone (guests included) via the conversation channel
+        broadcast(new MessageStatusUpdated($user ? $user->id : null, "Samuel is clarifying your intention...", $conversationId))->toOthers();
+
+        Log::info("Starting intent classification for message: " . Str::limit($userMessage, 50));
         $intent = $intentService->classify($userMessage);
+        Log::info("Classified intent: " . $intent);
 
         $mode = $request->input('mode') ?? ($isLoggedIn ? $user->preferred_model : 'fast');
         $model = $request->input('model'); // Optional model override
