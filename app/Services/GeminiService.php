@@ -16,7 +16,7 @@ class GeminiService implements AiServiceInterface
     {
         $this->apiKey = config('services.gemini.api_key');
         $this->model = config('services.gemini.model', 'gemini-1.5-flash');
-        $this->baseUrl = "https://generativelanguage.googleapis.com/v1/models";
+        $this->baseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
     }
 
     /**
@@ -60,13 +60,14 @@ class GeminiService implements AiServiceInterface
         }
 
         $model = $model ?? $this->model;
+        $url = "{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}";
         
         try {
             $response = Http::timeout(60)
-                ->post("{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}", $payload);
+                ->post($url, $payload);
 
             if (!$response->successful()) {
-                Log::error("Gemini API Error: " . $response->body());
+                Log::error("Gemini API Error: [URL: {$url}] " . $response->body());
                 throw new \Exception("Gemini API Error: " . $response->status());
             }
 
