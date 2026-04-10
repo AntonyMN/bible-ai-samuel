@@ -195,7 +195,7 @@ class ChatController extends Controller
         $messages[] = ['role' => 'user', 'content' => $userMessage];
 
         try {
-            $response = $aiService->chat($messages, $model ?: 'gemini-1.5-flash-latest');
+            $response = $aiService->chat($messages, $model ?: 'gemini-flash-latest');
             $aiContent = $response['content'];
 
             // Handle Image Generation Tags

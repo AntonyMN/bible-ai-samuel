@@ -4,24 +4,30 @@ This document tracks the current technical infrastructure and service providers 
 
 ## AI & Thinking Engine
 - **Provider**: Google AI Studio (Gemini)
-- **Model**: `gemini-2.0-flash`
+- **Model**: `gemini-flash-latest` (Confirmed alias for stable production routing)
+- **Architecture**: **Agentic Intention-Based Routing** (Orchestrated in Laravel)
 - **Interface**: `App\Services\AiServiceInterface`
-- **Fallback**: Ollama (Local) / RunPod (GPU Cluster)
+- **Orchestration**: `App\Services\IntentClassificationService`
 - **Status**: **LIVE**
 
 ## Communication & Real-time
-- **Protocol**: Laravel Reverb (WebSockets)
-- **Broadcast**: `App\Events\MessageSent`
-- **Worker Configuration**: Laravel Queue (Supervisor managed)
+- **Protocol**: Laravel Reverb (WebSocket server running on port 8080)
+- **Frontend Sync**: Laravel Echo (Vite integrated)
+- **Mobile Client**: `pusher_channels_flutter` (Integrated via Pusher-compatible protocol)
+- **Broadcast**: `App\Events\MessageStatusUpdated` (Streams thought process in real-time)
+- **Worker**: Supervisor managed `php artisan queue:work`
 - **Status**: **LIVE**
 
 ## Image Generation
-- **Provider**: RunPod (SDXL API)
+- **Provider**: RunPod (SDXL Dynamic GPU Cluster)
+- **Endpoint ID**: `djxdrz33sby1qu`
+- **Processing**: PHP GD with Dynamic Scripture Overlay (vibrant colors, readability shadows)
 - **Service**: `App\Services\RunPodImageService`
+- **Quota**: 3 images per day/user (MongoDB tracked)
 - **Status**: **LIVE**
 
 ## Bible Data & Vector Store
-- **Database**: MongoDB (Verses)
+- **Database**: MongoDB (Verses and Conversations)
 - **Vector Store**: ChromaDB (Embeddings)
 - **Embedding Model**: `text-embedding-004` (Gemini)
 - **Status**: **LIVE**
@@ -42,5 +48,4 @@ This document tracks the current technical infrastructure and service providers 
 - **IP Address**: `159.89.109.15`
 - **User**: `samuel`
 - **SSH Command**: `ssh samuel@159.89.109.15`
-- **Password**: `encomm.co.ke`
 - **Status**: **LIVE**
