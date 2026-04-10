@@ -141,16 +141,15 @@ class ChatController extends Controller
             $systemPrompt .= "Current Time (Local): " . now()->toDateTimeString() . "\n";
             $systemPrompt .= "Bible Version: " . ($request->input('bible_version') ?? 'BSB') . "\n";
 
-            // Specialized prompts based on Intent
             if ($intent === 'video') {
                 $systemPrompt .= "\nHANDLING VIDEO REQUEST: At this time, you CANNOT generate videos. Explain this gently to the user, mentioning it might be a future feature as you are still growing. Always offer an encouraging scripture.\n";
             } elseif ($intent === 'factual') {
                 $systemPrompt .= "\nHANDLING FACTUAL QUERY: The user is asking for a specific biblical fact. Keep your reply straightforward, factual, and include a scriptural reference. If the fact is NOT in the Bible (e.g., electricity), explain that you only refer to the Bible and specify the version being used.\n";
-                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Fetching scriptural answer and reference...", $request->input('conversation_id')))->toOthers();
+                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Fetching scriptural answer and reference...", $conversationId))->toOthers();
             } elseif ($intent === 'image') {
-                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Generating spiritual image, may take a while longer...", $request->input('conversation_id')))->toOthers();
+                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Generating spiritual image, may take a while longer...", $conversationId))->toOthers();
             } else {
-                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Seeking guidance in the Word...", $request->input('conversation_id')))->toOthers();
+                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Seeking guidance in the Word...", $conversationId))->toOthers();
             }
 
             if ($mode === 'fast') {
@@ -218,13 +217,14 @@ class ChatController extends Controller
                             $user->update(['last_image_at' => now()]);
                             $aiContent = str_replace($fullTag, "\n\n![Spiritual Image](" . $imageUrl . ")", $aiContent);
                         } else {
-                            $aiContent = str_replace($fullTag, "\n\n*(Note: This feature is still in test, and will be fully functional soon. Peace be with you.)*", $aiContent);
+                            $aiContent = str_replace($fullTag, "\n\n*(Note: Image generation is currently undergoing maintenance. Peace be with you.)*", $aiContent);
                         }
                     } catch (\Exception $e) {
-                        $aiContent = str_replace($fullTag, "", $aiContent);
+                        Log::error("RunPod Image Generation Failed: " . $e->getMessage());
+                        $aiContent = str_replace($fullTag, "\n\n*(Image generation failed momentarily. Please be patient as we improve Samuel's capabilities.)*", $aiContent);
                     }
                 } else {
-                    $aiContent = str_replace($fullTag, "", $aiContent);
+                    $aiContent = str_replace($fullTag, "\n\n*(To see Samuel's generated spiritual images, please log in or create a free account. Peace be with you.)*", $aiContent);
                 }
             }
 
