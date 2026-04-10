@@ -167,5 +167,41 @@ class ApiService {
     return null;
   }
 
+  Future<List<dynamic>> getMemories() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/memories'), headers: _headers);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching memories: $e');
+    }
+    return [];
+  }
+
+  Future<bool> deleteMemory(String id) async {
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/memories/$id'), headers: _headers);
+      return response.statusCode == 200;
+    } catch (e) {
+      print('DEBUG: Error deleting memory: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile(Map<String, dynamic> profileData) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/user/profile'),
+        headers: _headers,
+        body: jsonEncode(profileData),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('DEBUG: Error updating profile: $e');
+      return false;
+    }
+  }
+
   bool get isAuthenticated => _token != null;
 }

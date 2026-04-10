@@ -101,6 +101,8 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
             return $request->user();
         });
 
+        Route::patch('/user/profile', [ChatController::class, 'updateProfile']);
+
         Route::get('/conversations', function (Request $request) {
             return \App\Models\Conversation::where('user_id', (string) $request->user()->id)
                 ->orderBy('updated_at', 'desc')

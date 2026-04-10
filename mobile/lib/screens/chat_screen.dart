@@ -129,6 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            offset: const Offset(0, 50),
             onSelected: (value) async {
               if (value == 'keep_online') {
                 final url = Uri.parse('https://ko-fi.com/Y8Y21W7RKD');
@@ -139,6 +140,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 Navigator.pushNamed(context, '/auth');
               } else if (value == 'logout') {
                 authProvider.logout();
+              } else if (value == 'profile') {
+                Navigator.pushNamed(context, '/profile');
+              } else if (value == 'memories') {
+                Navigator.pushNamed(context, '/memories');
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -151,6 +156,25 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ),
               const PopupMenuDivider(),
+              if (authProvider.isAuthenticated) ...[
+                const PopupMenuItem<String>(
+                  value: 'profile',
+                  child: ListTile(
+                    leading: Icon(Icons.person),
+                    title: Text('My Profile'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'memories',
+                  child: ListTile(
+                    leading: Icon(Icons.history_edu),
+                    title: Text('My Life (Memories)'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuDivider(),
+              ],
               if (!authProvider.isAuthenticated)
                 const PopupMenuItem<String>(
                   value: 'login',
@@ -223,59 +247,88 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
-            decoration: BoxDecoration(
-              color: isUser ? const Color(0xFF7E22CE) : Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: isUser ? const Radius.circular(20) : Radius.zero,
-                bottomRight: isUser ? Radius.zero : const Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
-              ],
-            ),
-            child: isUser 
-              ? Text(message.content, style: const TextStyle(color: Colors.white, fontSize: 16))
-              : MarkdownBody(
-                  data: message.content,
-                  styleSheet: MarkdownStyleSheet(
-                    p: TextStyle(color: Colors.grey[800], fontSize: 16),
-                    listBullet: TextStyle(color: Colors.purple[700], fontWeight: FontWeight.bold),
-                    listIndent: 24.0,
-                    blockSpacing: 12.0,
-                    strong: const TextStyle(fontWeight: FontWeight.bold),
+          if (!isUser)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
+                          ),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                          ],
+                        ),
+                        child: MarkdownBody(
+                          data: message.content,
+                          styleSheet: MarkdownStyleSheet(
+                            p: TextStyle(color: Colors.grey[800], fontSize: 16),
+                            listBullet: TextStyle(color: Colors.purple[700], fontWeight: FontWeight.bold),
+                            listIndent: 24.0,
+                            blockSpacing: 12.0,
+                            strong: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      if (message.citations != null && message.citations!.isNotEmpty)
+                        _buildCitations(message.citations!),
+                    ],
                   ),
                 ),
-          ),
-          if (!isUser && message.citations != null && message.citations!.isNotEmpty)
-            _buildCitations(message.citations!),
-          if (!isUser)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    iconSize: 20,
-                    constraints: const BoxConstraints(),
-                    padding: const EdgeInsets.all(4),
-                    icon: Icon(
-                      (_isSpeaking && _speakingIndex == index) ? Icons.stop_circle : Icons.volume_up,
-                      color: Colors.purple[300],
-                    ),
-                    onPressed: () => _playTts(message.content, index),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, left: 4),
+                  child: Column(
+                    children: [
+                      IconButton(
+                        iconSize: 24,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          (_isSpeaking && _speakingIndex == index) ? Icons.stop_circle : Icons.volume_up,
+                          color: Colors.purple[300],
+                        ),
+                        onPressed: () => _playTts(message.content, index),
+                      ),
+                      if (_isSpeaking && _speakingIndex == index)
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple),
+                        ),
+                    ],
                   ),
-                  if (_isSpeaking && _speakingIndex == index)
-                    const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple),
-                    ),
-                ],
+                ),
+              ],
+            )
+          else
+            Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7E22CE),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Text(message.content, style: const TextStyle(color: Colors.white, fontSize: 16)),
               ),
             ),
         ],

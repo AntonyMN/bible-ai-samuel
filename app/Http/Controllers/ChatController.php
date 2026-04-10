@@ -369,6 +369,33 @@ class ChatController extends Controller
         }
     }
 
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'bible_version' => 'nullable|string|in:BSB,KJV,ASV,WEB',
+            'mode' => 'nullable|string|in:fast,deep,research',
+        ]);
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'bible_version' => $request->bible_version ?? $user->bible_version,
+            'preferred_model' => $request->mode ?? $user->preferred_model,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'user' => $user
+        ]);
+    }
+
     private function attachSystematicFootnotes($content, $version)
     {
         $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)(?:\s+|(?<=[a-z])(?=\d))(?:\s*chapter\s+)?(\d+)(?::(\d+)(?:-(\d+))?)?/i';

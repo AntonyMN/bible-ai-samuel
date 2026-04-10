@@ -4,8 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'services/api_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/memory_provider.dart';
 import 'screens/chat_screen.dart';
 import 'screens/auth_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/memories_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +22,7 @@ void main() async {
         Provider<ApiService>.value(value: apiService),
         ChangeNotifierProvider(create: (_) => AuthProvider(apiService)),
         ChangeNotifierProvider(create: (_) => ChatProvider(apiService)),
+        ChangeNotifierProvider(create: (_) => MemoryProvider(apiService)),
       ],
       child: const SamuelApp(),
     ),
@@ -45,9 +49,12 @@ class SamuelApp extends StatelessWidget {
           Theme.of(context).textTheme,
         ),
       ),
-      home: const ChatScreen(),
+      initialRoute: '/',
       routes: {
+        '/': (context) => const ChatScreen(),
         '/auth': (context) => const AuthScreen(),
+        '/profile': (context) => const ProfileScreen(),
+        '/memories': (context) => const MemoriesScreen(),
       },
     );
   }

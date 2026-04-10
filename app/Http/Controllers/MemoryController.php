@@ -12,13 +12,17 @@ class MemoryController extends Controller
     /**
      * Display a listing of the user's memories.
      */
-    public function index()
+    public function index(Request $request)
     {
         $memories = Memory::where('user_id', Auth::id())
             ->orderBy('is_completed', 'asc')
             ->orderBy('importance', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
+
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json($memories);
+        }
 
         return Inertia::render('Memories/Index', [
             'memories' => $memories
@@ -36,13 +40,21 @@ class MemoryController extends Controller
             'importance' => 'required|integer|min:1|max:5',
         ]);
 
-        Memory::create([
+        $memory = Memory::create([
             'user_id' => Auth::id(),
             'content' => $request->content,
             'category' => $request->category,
             'importance' => $request->importance,
             'is_completed' => false,
         ]);
+
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Memory added successfully',
+                'memory' => $memory
+            ]);
+        }
 
         return redirect()->back()->with('message', 'Memory added successfully');
     }
@@ -63,16 +75,31 @@ class MemoryController extends Controller
 
         $memory->update($request->only(['content', 'category', 'importance', 'is_completed']));
 
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Memory updated successfully',
+                'memory' => $memory
+            ]);
+        }
+
         return redirect()->back()->with('message', 'Memory updated successfully');
     }
 
     /**
      * Remove the specified memory from storage.
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $memory = Memory::where('user_id', Auth::id())->findOrFail($id);
         $memory->delete();
+
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Memory deleted successfully'
+            ]);
+        }
 
         return redirect()->back()->with('message', 'Memory deleted successfully');
     }
