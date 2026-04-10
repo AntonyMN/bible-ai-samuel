@@ -12,7 +12,7 @@ Before generating a full response, Samuel uses a high-speed AI pass (`IntentClas
 - **Output Categories**:
   - `image`: User seeks visual inspiration.
   - `video`: User asks for video content (future feature).
-  - `factual`: User asks for specific biblical records or facts.
+  - `factual`: User is asking for a specific biblical record or facts.
   - `reflection`: User is seeking standard pastoral care and guidance.
 
 ## 3. Specialized Routing

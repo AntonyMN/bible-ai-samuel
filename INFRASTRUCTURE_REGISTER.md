@@ -27,9 +27,14 @@ This document tracks the current technical infrastructure and service providers 
 - **Status**: **LIVE**
 
 ## Bible Data & Vector Store
-- **Database**: MongoDB (Verses and Conversations)
+-**Database**: MongoDB (Verses and Conversations)
 - **Vector Store**: ChromaDB (Embeddings)
 - **Embedding Model**: `text-embedding-004` (Gemini)
+- **Status**: **LIVE**
+
+## Mobile Output
+- **Real-time Connectivity**: Implemented via `pusher_channels_flutter`
+- **Analysis State**: Verified 0 errors/0 warnings (10-Apr-2026)
 - **Status**: **LIVE**
 
 ## Messaging & Social

@@ -79,12 +79,10 @@ class GeminiService implements AiServiceInterface
             $data = $response->json();
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            // Return in the same format OllamaService was providing for backward compatibility
+            // Return in the format the Controller expects
             return [
-                'message' => [
-                    'role' => 'assistant',
-                    'content' => trim($text)
-                ]
+                'role' => 'assistant',
+                'content' => trim($text)
             ];
         } catch (\Exception $e) {
             Log::error("Gemini Service Exception: " . $e->getMessage());
