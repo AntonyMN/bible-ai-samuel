@@ -26,6 +26,26 @@ const showMobileMenu = ref(false);
 const selectedMode = ref(props.userPreferences?.preferred_mode || 'fast');
 const selectedModel = ref('llama3.2:3b'); // Hardcoded as per request
 const chatContainer = ref(null);
+const chatInput = ref(null);
+const adjustTextareaHeight = () => {
+    if (chatInput.value) {
+        chatInput.value.style.height = 'auto';
+        chatInput.value.style.height = (chatInput.value.scrollHeight) + 'px';
+    }
+};
+watch(newMessage, (val) => {
+    if (val === '') {
+        if (chatInput.value) chatInput.value.style.height = 'auto';
+    } else {
+        setTimeout(adjustTextareaHeight, 0);
+    }
+});
+const handleKeydown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+};
 
 // TTS State
 const audioPlayer = ref(null);
@@ -771,13 +791,14 @@ onMounted(() => {
         <!-- Input Area -->
         <footer class="bg-white border-t border-stone-200 p-4 shadow-inner">
             <div class="max-w-4xl mx-auto relative">
-                <input 
+                <textarea 
+                    ref="chatInput"
                     v-model="newMessage" 
-                    type="text" 
-                    class="w-full pl-6 pr-14 py-4 bg-stone-50 border border-stone-200 rounded-full focus:ring-4 focus:ring-purple-500/10 focus:border-purple-700 outline-none transition-all text-base shadow-sm font-['Outfit']"
+                    class="w-full pl-6 pr-14 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-700 outline-none transition-all text-base shadow-sm font-['Outfit'] resize-none max-h-48 overflow-y-auto"
                     placeholder="Ask a biblical question..."
-                    @keyup.enter="sendMessage"
-                >
+                    rows="1"
+                    @keydown="handleKeydown"
+                ></textarea>
                 <button 
                     class="absolute right-2 top-2 p-2 bg-purple-700 text-white rounded-full hover:bg-purple-800 transition-all duration-300 shadow-md disabled:opacity-30 flex items-center justify-center w-12 h-12 transform hover:scale-105"
                     :disabled="!newMessage.trim() || isTyping"

@@ -492,12 +492,15 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _controller,
+              maxLines: 5,
+              minLines: 1,
+              keyboardType: TextInputType.multiline,
               decoration: InputDecoration(
                 hintText: 'Ask a biblical question...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                 filled: true,
                 fillColor: const Color(0xFFF5F5F4),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 suffixIcon: _speechEnabled 
                   ? IconButton(
                       icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
