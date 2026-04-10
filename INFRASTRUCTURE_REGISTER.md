@@ -7,7 +7,7 @@ This document tracks the current technical infrastructure and service providers 
 - **Model**: `gemini-flash-latest` (Confirmed alias for stable production routing)
 - **Architecture**: **Agentic Intention-Based Routing** (Orchestrated in Laravel)
 - **Interface**: `App\Services\AiServiceInterface`
-- **Orchestration**: `App\Services\IntentClassificationService`
+- **Orchestration**: `App\Services\IntentClassificationService` (Category check pass)
 - **Status**: **LIVE**
 
 ## Communication & Real-time
