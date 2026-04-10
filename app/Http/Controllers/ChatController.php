@@ -158,7 +158,7 @@ class ChatController extends Controller
             $systemPrompt .= "\nIMAGE GENERATION: You have the ability to generate spiritual, faith-inspired images. If the user asks for an image, a card, or a visual, or if you feel a beautiful image would be particularly encouraging (especially after a victory or during a struggle), you can generate one.\n";
             $systemPrompt .= "To generate an image, append this EXACT tag at the end of your message: [IMAGE: artistic prompt|scripture verse text|reference].\n";
             $systemPrompt .= "Example: [IMAGE: A peaceful garden with a golden sunrise, oil painting style|The Lord is my shepherd; I shall not want.|Psalm 23:1]\n";
-            $systemPrompt .= "The prompt should be artistic and reverent. The scripture should be relevant to the conversation.\n";
+            $systemPrompt .= "CRITICAL: If the user asks for an image, or if it is highly appropriate to give one, DO NOT ASK FOR PERMISSION. Do not say 'I would love to create one for you'—simply generate the response and append the tag at the end in the same message. The prompt should be artistic and reverent. The scripture should be relevant to the conversation.\n";
             
             $factResult = $factService->getFactsForQuery($userMessage);
             if ($factResult['is_factual']) {

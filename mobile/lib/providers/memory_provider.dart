@@ -26,7 +26,7 @@ class MemoryProvider with ChangeNotifier {
   Future<bool> deleteMemory(String id) async {
     final success = await _apiService.deleteMemory(id);
     if (success) {
-      _memories.removeWhere((m) => m['_id'] == id);
+      _memories.removeWhere((m) => m['id'] == id);
       notifyListeners();
     }
     return success;

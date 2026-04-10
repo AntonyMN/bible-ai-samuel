@@ -100,7 +100,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.grey),
-                          onPressed: () => _confirmDelete(memory['_id']),
+                          onPressed: () => _confirmDelete(memory['id']?.toString() ?? ''),
                         ),
                       ),
                     );
