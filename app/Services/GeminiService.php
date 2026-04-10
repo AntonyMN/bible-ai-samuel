@@ -60,14 +60,13 @@ class GeminiService implements AiServiceInterface
         }
 
         $model = $model ?? $this->model;
-        $url = "{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}";
         
         try {
             $response = Http::timeout(60)
-                ->post($url, $payload);
+                ->post("{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}", $payload);
 
             if (!$response->successful()) {
-                Log::error("Gemini API Error: [URL: {$url}] " . $response->body());
+                Log::error("Gemini API Error: " . $response->body());
                 throw new \Exception("Gemini API Error: " . $response->status());
             }
 

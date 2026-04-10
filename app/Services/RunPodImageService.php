@@ -15,7 +15,7 @@ class RunPodImageService
     public function __construct()
     {
         $this->apiKey = config('services.runpod.api_key');
-        $this->endpointId = env('RUNPOD_SDXL_ENDPOINT_ID', 'djxdrz33sby1qu');
+        $this->endpointId = config('services.runpod.endpoint_id', 'djxdrz33sby1qu');
     }
 
     /**
