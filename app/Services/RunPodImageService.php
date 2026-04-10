@@ -73,6 +73,7 @@ class RunPodImageService
                 Log::info("RunPod SDXL Job ({$jobId}) Status: {$status}");
 
                 if ($status === 'COMPLETED') {
+                    Log::info("Full RunPod Status: " . json_encode($statusJson));
                     $output = $statusJson['output'];
                     $imageUrl = $output['image_url'] ?? $output[0] ?? null;
                     
