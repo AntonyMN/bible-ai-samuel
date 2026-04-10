@@ -33,6 +33,7 @@ const isSpeaking = ref(false);
 const isPaused = ref(false);
 const currentlySpeakingMessageIndex = ref(-1);
 const selectedBibleVersion = ref(props.userPreferences?.bible_version || 'BSB');
+const remainingImages = ref(props.userPreferences?.remaining_images || 0);
 
 // TTS Search & Highlighting
 const currentHighlightIndex = ref(-1);
@@ -115,6 +116,10 @@ const sendMessage = () => {
             
             // Update URL without reload if possible (Inertia history)
             window.history.pushState({}, '', route('chat.index') + '?conversation_id=' + response.data.conversation_id);
+        }
+
+        if (response.data.remaining_images !== undefined) {
+            remainingImages.value = response.data.remaining_images;
         }
 
         // Update active sidebar timestamp
@@ -600,6 +605,18 @@ onMounted(() => {
                             <i class="fas fa-chart-line w-4"></i>
                             <span>Admin Dashboard</span>
                         </Link>
+                        <div class="px-4 py-2 border-t border-stone-50 mt-1">
+                            <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-stone-400">
+                                <span>Spiritual Images</span>
+                                <span :class="remainingImages > 0 ? 'text-purple-600' : 'text-red-400'">{{ remainingImages }}/3 left</span>
+                            </div>
+                            <div class="w-full bg-stone-100 h-1.5 rounded-full mt-1 overflow-hidden">
+                                <div 
+                                    class="bg-purple-600 h-full transition-all duration-500" 
+                                    :style="{ width: (remainingImages / 3 * 100) + '%' }"
+                                ></div>
+                            </div>
+                        </div>
                         <hr class="border-stone-50 my-1">
                         <button 
                             @click="handleLogout"
@@ -662,6 +679,20 @@ onMounted(() => {
                     <button class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-purple-50 hover:border-purple-200 text-left transition shadow-sm group" @click="newMessage = 'What does the bible say about wisdom?'">
                         <i class="fas fa-lightbulb text-purple-200 group-hover:text-purple-700 mr-2"></i>
                         "What about wisdom?"
+                    </button>
+                    <button 
+                        v-if="auth.user"
+                        class="text-sm p-4 bg-white border border-stone-200 rounded-2xl text-stone-600 hover:bg-purple-50 hover:border-purple-200 text-left transition shadow-sm group col-span-2 flex items-center justify-between" 
+                        @click="newMessage = 'Samuel, please create a spiritual image for me about God\'s grace.'"
+                        :disabled="remainingImages <= 0"
+                    >
+                        <div class="flex items-center">
+                            <i class="fas fa-palette text-purple-200 group-hover:text-purple-700 mr-3"></i>
+                            <span>"Give me a spiritual image..."</span>
+                        </div>
+                        <span :class="['text-[9px] font-bold uppercase tracking-tighter px-2 py-1 rounded-lg', remainingImages > 0 ? 'bg-purple-50 text-purple-600' : 'bg-red-50 text-red-400']">
+                            {{ remainingImages }} left today
+                        </span>
                     </button>
                 </div>
             </div>

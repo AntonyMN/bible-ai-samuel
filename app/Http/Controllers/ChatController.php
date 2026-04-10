@@ -62,7 +62,10 @@ class ChatController extends Controller
                 'tts_voice' => Auth::user()->tts_voice,
                 'tts_language' => Auth::user()->tts_language,
                 'tts_rate' => Auth::user()->tts_rate ?? 1.0,
-            ] : null,
+                'remaining_images' => $this->getRemainingImages(Auth::user()),
+            ] : [
+                'remaining_images' => 0
+            ],
         ]);
     }
 
@@ -255,23 +258,38 @@ class ChatController extends Controller
             // Handle Image Generation Tags
             if (preg_match('/\[IMAGE:\s*(.*?)\|(.*?)\|(.*?)\]/i', $aiContent, $imageMatches)) {
                 $fullTag = $imageMatches[0];
-                $imgPrompt = trim($imageMatches[1]);
-                $imgVerse = trim($imageMatches[2]);
-                $imgRef = trim($imageMatches[3]);
-
-                try {
-                    // Prepend "reverent, Christian-themed digital art" to maintain quality/faith
-                    $finalPrompt = "reverent Christian-themed sacred art: " . $imgPrompt;
-                    $imageUrl = $runpodImage->generateWithOverlay($finalPrompt, $imgVerse, $imgRef);
-                    if ($imageUrl) {
-                        $imgHtml = "\n\n![Spiritual Reflection]({$imageUrl})";
-                        $aiContent = str_replace($fullTag, $imgHtml, $aiContent);
+                
+                // Restriction: Only logged in users
+                if (!$isLoggedIn) {
+                    $aiContent = str_replace($fullTag, "\n\n*(Note: Image generation is a blessing reserved for our registered brothers and sisters. Please sign in to receive this visual encouragement.)*", $aiContent);
+                } else {
+                    // Restriction: Quota
+                    if ($this->getRemainingImages($user) <= 0) {
+                        $aiContent = str_replace($fullTag, "\n\n*(Note: You have reached your daily limit of 3 spiritual images. Peace be with you, we shall create more tomorrow.)*", $aiContent);
                     } else {
-                        $aiContent = str_replace($fullTag, "", $aiContent);
+                        $imgPrompt = trim($imageMatches[1]);
+                        $imgVerse = trim($imageMatches[2]);
+                        $imgRef = trim($imageMatches[3]);
+
+                        try {
+                            // Prepend "reverent, Christian-themed digital art" to maintain quality/faith
+                            $finalPrompt = "reverent Christian-themed sacred art: " . $imgPrompt;
+                            $imageUrl = $runpodImage->generateWithOverlay($finalPrompt, $imgVerse, $imgRef);
+                            if ($imageUrl) {
+                                // Successful generation: Update quota
+                                $user->increment('image_generations_today');
+                                $user->update(['last_image_at' => now()]);
+                                
+                                $imgHtml = "\n\n![Spiritual Reflection]({$imageUrl})";
+                                $aiContent = str_replace($fullTag, $imgHtml, $aiContent);
+                            } else {
+                                $aiContent = str_replace($fullTag, "", $aiContent);
+                            }
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error("RunPod Image Generation failed for chat: " . $e->getMessage());
+                            $aiContent = str_replace($fullTag, "", $aiContent);
+                        }
                     }
-                } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::error("RunPod Image Generation failed for chat: " . $e->getMessage());
-                    $aiContent = str_replace($fullTag, "", $aiContent);
                 }
             }
 
@@ -298,6 +316,7 @@ class ChatController extends Controller
                 'success' => true,
                 'message' => $aiMessage,
                 'conversation_id' => $convId,
+                'remaining_images' => $isLoggedIn ? $this->getRemainingImages($user) : 0,
             ]);
 
         } catch (\Exception $e) {
@@ -482,5 +501,24 @@ class ChatController extends Controller
         }
 
         return $content . $footer;
+    }
+
+    private function getRemainingImages($user)
+    {
+        if (!$user) return 0;
+        
+        $limit = 3;
+        $today = now()->startOfDay();
+        $lastImageAt = $user->last_image_at;
+
+        // Reset if last image was NOT today
+        if ($lastImageAt && $lastImageAt < $today) {
+            $user->update([
+                'image_generations_today' => 0
+            ]);
+            return $limit;
+        }
+
+        return max(0, $limit - ($user->image_generations_today ?? 0));
     }
 }

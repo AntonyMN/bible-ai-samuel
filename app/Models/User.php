@@ -34,6 +34,8 @@ class User extends Authenticatable
         'is_admin',
         'is_donor',
         'donor_thanked_at',
+        'image_generations_today',
+        'last_image_at',
     ];
 
     /**
@@ -59,6 +61,8 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_donor' => 'boolean',
             'donor_thanked_at' => 'datetime',
+            'image_generations_today' => 'integer',
+            'last_image_at' => 'datetime',
         ];
     }
 
