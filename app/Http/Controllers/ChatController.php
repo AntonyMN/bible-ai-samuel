@@ -10,6 +10,7 @@ use App\Events\MessageSent;
 use App\Jobs\GenerateConversationTitle;
 use App\Services\MemoryService;
 use App\Services\BibleFactService;
+use App\Services\RunPodImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -65,7 +66,7 @@ class ChatController extends Controller
         ]);
     }
 
-    public function send(Request $request, AiServiceInterface $aiService, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService)
+    public function send(Request $request, AiServiceInterface $aiService, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService, RunPodImageService $runpodImage)
     {
         set_time_limit(300); // 5 minutes for deep reflections
         $request->validate([
@@ -149,6 +150,13 @@ class ChatController extends Controller
                     $systemPrompt .= "\nPASTORAL CARE: Samuel, use the Personal Context to show you care. If a memory 'Needs probing', gently ask for missing details (time, venue, significance) to better pray for them. If an event 'PASSED', ask how it went. Don't be pushy or clinical—be a brother.\n";
                 }
             }
+            
+            // Image Generation Capability
+            $systemPrompt .= "\nIMAGE GENERATION: You have the ability to generate spiritual, faith-inspired images. If the user asks for an image, a card, or a visual, or if you feel a beautiful image would be particularly encouraging (especially after a victory or during a struggle), you can generate one.\n";
+            $systemPrompt .= "To generate an image, append this EXACT tag at the end of your message: [IMAGE: artistic prompt|scripture verse text|reference].\n";
+            $systemPrompt .= "Example: [IMAGE: A peaceful garden with a golden sunrise, oil painting style|The Lord is my shepherd; I shall not want.|Psalm 23:1]\n";
+            $systemPrompt .= "The prompt should be artistic and reverent. The scripture should be relevant to the conversation.\n";
+            
             $factResult = $factService->getFactsForQuery($userMessage);
             if ($factResult['is_factual']) {
                 if ($factResult['found']) {
@@ -241,6 +249,29 @@ class ChatController extends Controller
                     : "PLEASE SEEK HELP IMMEDIATELY: Call 988 or local emergency services.";
                 if (stripos($aiContent, "988") === false && stripos($aiContent, "Hotline") === false) {
                     $aiContent = $resourceInfo . "\n\n" . $aiContent;
+                }
+            }
+
+            // Handle Image Generation Tags
+            if (preg_match('/\[IMAGE:\s*(.*?)\|(.*?)\|(.*?)\]/i', $aiContent, $imageMatches)) {
+                $fullTag = $imageMatches[0];
+                $imgPrompt = trim($imageMatches[1]);
+                $imgVerse = trim($imageMatches[2]);
+                $imgRef = trim($imageMatches[3]);
+
+                try {
+                    // Prepend "reverent, Christian-themed digital art" to maintain quality/faith
+                    $finalPrompt = "reverent Christian-themed sacred art: " . $imgPrompt;
+                    $imageUrl = $runpodImage->generateWithOverlay($finalPrompt, $imgVerse, $imgRef);
+                    if ($imageUrl) {
+                        $imgHtml = "\n\n![Spiritual Reflection]({$imageUrl})";
+                        $aiContent = str_replace($fullTag, $imgHtml, $aiContent);
+                    } else {
+                        $aiContent = str_replace($fullTag, "", $aiContent);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("RunPod Image Generation failed for chat: " . $e->getMessage());
+                    $aiContent = str_replace($fullTag, "", $aiContent);
                 }
             }
 

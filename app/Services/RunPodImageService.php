@@ -12,10 +12,25 @@ class RunPodImageService
     protected $apiKey;
     protected $endpointId;
 
-    public function __construct()
+    protected $overlayService;
+
+    public function __construct(ScriptureOverlayService $overlayService)
     {
         $this->apiKey = config('services.runpod.api_key');
         $this->endpointId = config('services.runpod.endpoint_id', 'djxdrz33sby1qu');
+        $this->overlayService = $overlayService;
+    }
+
+    /**
+     * Generate an image with a scripture overlay
+     */
+    public function generateWithOverlay(string $prompt, string $verse, string $reference)
+    {
+        $imageUrl = $this->generateImage($prompt);
+        if ($imageUrl) {
+            return $this->overlayService->overlay($imageUrl, $verse, $reference);
+        }
+        return null;
     }
 
     /**
