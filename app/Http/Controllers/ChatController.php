@@ -82,6 +82,11 @@ class ChatController extends Controller
         $userName = $isLoggedIn ? explode(' ', $user->name)[0] : 'friend';
         $bibleVersion = $request->bible_version ?? ($isLoggedIn ? $user->bible_version : 'BSB');
 
+        // 1. Extract Memories (if logged in)
+        if ($isLoggedIn) {
+            $memoryService->extractMemories($userId, $userMessage, $request->conversation_id);
+        }
+
         // 2. Vector Search for RAG (Local fallback/enrichment)
         $context = "";
         $citations = [];
@@ -139,7 +144,10 @@ class ChatController extends Controller
             if (!empty($context)) $systemPrompt .= "Relevant Scripture Context:\n" . $context;
             if ($isLoggedIn) {
                 $memoryContext = $memoryService->getInjectedContext($userId);
-                if (!empty($memoryContext)) $systemPrompt .= "\nPersonal Context: " . $memoryContext;
+                if (!empty($memoryContext)) {
+                    $systemPrompt .= "\nPersonal Context: " . $memoryContext;
+                    $systemPrompt .= "\nPASTORAL CARE: Samuel, use the Personal Context to show you care. If a memory 'Needs probing', gently ask for missing details (time, venue, significance) to better pray for them. If an event 'PASSED', ask how it went. Don't be pushy or clinical—be a brother.\n";
+                }
             }
             $factResult = $factService->getFactsForQuery($userMessage);
             if ($factResult['is_factual']) {
@@ -249,7 +257,10 @@ class ChatController extends Controller
                 $conversation->update(['messages' => $currentMessages]);
             }
 
-            // 7. Broadcast for other clients/web
+            // 7. BroadCast & Update Memory Mention State
+            if ($isLoggedIn) {
+                $memoryService->markAsMentioned($userId, $aiContent);
+            }
             broadcast(new \App\Events\MessageSent($aiMessage, $convId));
 
             return response()->json([
