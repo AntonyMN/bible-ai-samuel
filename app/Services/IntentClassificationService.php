@@ -36,7 +36,7 @@ Intention:";
         try {
             $response = $this->aiService->chat([
                 ['role' => 'user', 'content' => $prompt]
-            ], 'gemini-1.5-flash-latest');
+            ], 'gemini-1.5-flash');
 
             $intention = strtolower(trim($response['content'] ?? 'reflection'));
             

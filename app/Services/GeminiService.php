@@ -61,6 +61,11 @@ class GeminiService implements AiServiceInterface
 
         $model = $model ?? $this->model;
         
+        // Safety check: if model is not a known gemini model (e.g. llama from frontend default), use default
+        if (str_contains($model, 'llama') || str_contains($model, 'ollama')) {
+            $model = $this->model;
+        }
+        
         try {
             $response = Http::timeout(60)
                 ->post("{$this->baseUrl}/{$model}:generateContent?key={$this->apiKey}", $payload);

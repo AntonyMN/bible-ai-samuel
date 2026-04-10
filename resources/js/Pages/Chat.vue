@@ -25,7 +25,7 @@ const typingStatus = ref('Samuel is searching the scriptures for you...');
 const showUserDropdown = ref(false);
 const showMobileMenu = ref(false);
 const selectedMode = ref(props.userPreferences?.preferred_mode || 'fast');
-const selectedModel = ref('llama3.2:3b'); // Hardcoded as per request
+const selectedModel = ref('gemini-1.5-flash-latest');
 const chatContainer = ref(null);
 const chatInput = ref(null);
 const adjustTextareaHeight = () => {
