@@ -16,8 +16,7 @@ class GeminiService implements AiServiceInterface
     {
         $this->apiKey = config('services.gemini.api_key');
         $this->model = config('services.gemini.model', 'gemini-1.5-flash');
-        $this->embeddingModel = config('services.gemini.embedding_model', 'text-embedding-004');
-        $this->baseUrl = "https://generativelanguage.googleapis.com/v1beta/models";
+        $this->baseUrl = "https://generativelanguage.googleapis.com/v1/models";
     }
 
     /**
