@@ -5,7 +5,14 @@ import { marked } from 'marked';
 
 const props = defineProps({
     post: Object,
+    relatedPosts: Array,
 });
+
+const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return 'https://blog.chatwithsamuel.org' + (url.startsWith('/') ? url : '/' + url);
+};
 
 const parsedContent = computed(() => {
     return marked.parse(props.post.content || '');
@@ -26,15 +33,15 @@ if (typeof window !== 'undefined') {
         <meta name="description" :content="post.meta_description" />
         <meta property="og:title" :content="post.title" />
         <meta property="og:description" :content="post.meta_description" />
-        <meta property="og:image" :content="post.image_url" />
-        <meta property="og:url" :content="'https://blog.chatwithsamuel.org/' + post.slug" />
+        <meta property="og:image" :content="getFullUrl(post.image_url)" />
+        <meta property="og:url" :content="'https://blog.chatwithsamuel.org/posts/' + post.slug" />
         <meta property="og:type" content="article" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" :content="post.title" />
         <meta name="twitter:description" :content="post.meta_description" />
-        <meta name="twitter:image" :content="post.image_url" />
+        <meta name="twitter:image" :content="getFullUrl(post.image_url)" />
     </Head>
-    <div class="min-h-screen bg-stone-50 text-stone-900 font-['Outfit'] selection:bg-purple-200 selection:text-purple-900">
+    <div class="min-h-screen bg-stone-50 text-stone-900 selection:bg-purple-200 selection:text-purple-900">
         <!-- Navigation -->
         <nav 
             :class="['fixed w-full z-50 transition-all duration-500 px-6 py-4 flex justify-between items-center', 
@@ -48,7 +55,7 @@ if (typeof window !== 'undefined') {
                 <span class="text-2xl font-bold tracking-tight text-stone-800 font-['Gentium_Book_Plus']">Samuel</span>
             </Link>
             <div class="flex items-center space-x-6 text-sm font-medium text-stone-600">
-                <Link :href="route('chat.index')" class="hover:text-purple-700 transition">Chat with Samuel</Link>
+                <a href="https://chat.chatwithsamuel.org" target="_blank" class="hover:text-purple-700 transition">Chat with Samuel</a>
             </div>
         </nav>
 
@@ -101,13 +108,35 @@ if (typeof window !== 'undefined') {
                 </article>
                 
                 <!-- Simple Comment Suggestion -->
-                <div class="bg-purple-50 rounded-[40px] p-12 text-center border border-purple-100 shadow-sm">
+                <div class="bg-purple-50 rounded-[40px] p-12 text-center border border-purple-100 shadow-sm mb-16">
                     <h3 class="text-2xl font-bold mb-4 font-['Gentium_Book_Plus'] text-stone-800">Discuss with Samuel</h3>
                     <p class="text-stone-600 mb-8">Have questions about this reflection? Chat with Samuel directly to explore the Word deeper.</p>
-                    <Link :href="route('chat.index')" class="inline-flex items-center space-x-2 bg-purple-700 text-white px-8 py-4 rounded-full hover:bg-purple-800 transition shadow-lg text-lg font-bold">
+                    <a href="https://chat.chatwithsamuel.org" target="_blank" class="inline-flex items-center space-x-2 bg-purple-700 text-white px-8 py-4 rounded-full hover:bg-purple-800 transition shadow-lg text-lg font-bold">
                         <i class="fas fa-comment"></i>
                         <span>Ask Samuel a Question</span>
-                    </Link>
+                    </a>
+                </div>
+
+                <!-- Related Posts -->
+                <div v-if="relatedPosts && relatedPosts.length > 0" class="mb-24">
+                    <h3 class="text-3xl font-bold mb-8 font-['Gentium_Book_Plus'] text-stone-900 border-b border-stone-200 pb-4">Other Reflections You Might Like</h3>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div v-for="rp in relatedPosts" :key="rp.id" class="group bg-white rounded-[30px] overflow-hidden shadow-sm hover:shadow-md transition border border-stone-100 flex flex-col">
+                            <Link :href="route('blog.show', rp.slug)" class="aspect-video overflow-hidden">
+                                <img :src="rp.image_url" :alt="rp.title" class="w-full h-full object-cover group-hover:scale-110 transition duration-500" />
+                            </Link>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <h4 class="text-lg font-bold mb-2 font-['Gentium_Book_Plus'] group-hover:text-purple-700 transition leading-tight line-clamp-2">
+                                    {{ rp.title }}
+                                </h4>
+                                <p class="text-xs text-stone-500 mb-4">{{ rp.topic }}</p>
+                                <Link :href="route('blog.show', rp.slug)" class="mt-auto text-purple-700 text-xs font-bold uppercase tracking-widest hover:underline flex items-center space-x-1">
+                                    <span>Read Insight</span>
+                                    <i class="fas fa-chevron-right text-[8px]"></i>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

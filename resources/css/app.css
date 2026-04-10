@@ -1,3 +1,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body, p, span, a, li, button, input, textarea {
+    font-family: 'Figtree', sans-serif !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    /* Keep headers using their specific fonts defined in components */
+    font-family: inherit;
+  }
+}

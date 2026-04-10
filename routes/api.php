@@ -92,10 +92,10 @@ Route::domain('api.chatwithsamuel.org')->group(function () {
         }
     });
 
-    // Guest Chat
+    // Chat Access (Public for Guests, recognizes Sanctum tokens for Auth)
     Route::post('/chat/send', [ChatController::class, 'send'])->middleware('usage_limit');
 
-    // Protected Routes
+    // Protected Routes (Authenticated via Sanctum on Mobile)
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/user', function (Request $request) {
             return $request->user();

@@ -25,8 +25,15 @@ class BlogController extends Controller
             ->where('status', 'published')
             ->firstOrFail();
 
+        $relatedPosts = Post::where('status', 'published')
+            ->where('slug', '!=', $slug)
+            ->latest('published_at')
+            ->take(3)
+            ->get();
+
         return Inertia::render('Blog/Show', [
             'post' => $post,
+            'relatedPosts' => $relatedPosts,
         ]);
     }
 }

@@ -12,7 +12,7 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400;1,700&family=Outfit:wght@100..900&family=Figtree:ital,wght@0,300..900;1,300..900&family=Crimson+Pro:ital,wght@0,200..900;1,200..900&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 
         <!-- Scripts -->
         @routes

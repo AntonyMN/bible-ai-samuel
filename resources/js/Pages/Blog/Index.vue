@@ -16,8 +16,17 @@ if (typeof window !== 'undefined') {
 </script>
 
 <template>
-    <Head title="Samuel's Journal - Spiritual Reflections" />
-    <div class="min-h-screen bg-stone-50 text-stone-900 font-['Outfit'] selection:bg-purple-200 selection:text-purple-900">
+    <Head>
+        <title>Samuel's Journal - Spiritual Reflections</title>
+        <meta name="description" content="Samuel's Journal: Spiritual reflections, historical insights, and encouraging words from your faithful companion." />
+        <meta property="og:title" content="Samuel's Journal - Spiritual Reflections" />
+        <meta property="og:description" content="Spiritual reflections, historical insights, and encouraging words from the heart of your faithful companion." />
+        <meta property="og:image" content="https://blog.chatwithsamuel.org/favicon.png" />
+        <meta property="og:url" content="https://blog.chatwithsamuel.org" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+    </Head>
+    <div class="min-h-screen bg-stone-50 text-stone-900 selection:bg-purple-200 selection:text-purple-900">
         <!-- Navigation (Simplified for Blog) -->
         <nav 
             :class="['fixed w-full z-50 transition-all duration-500 px-6 py-4 flex justify-between items-center', 
@@ -31,7 +40,7 @@ if (typeof window !== 'undefined') {
                 <span class="text-2xl font-bold tracking-tight text-stone-800 font-['Gentium_Book_Plus']">Samuel</span>
             </Link>
             <div class="flex items-center space-x-6 text-sm font-medium text-stone-600">
-                <Link :href="route('chat.index')" class="hover:text-purple-700 transition">Chat with Samuel</Link>
+                <a href="https://chat.chatwithsamuel.org" target="_blank" class="hover:text-purple-700 transition">Chat with Samuel</a>
             </div>
         </nav>
 

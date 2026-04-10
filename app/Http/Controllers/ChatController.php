@@ -72,11 +72,15 @@ class ChatController extends Controller
             'message' => 'required|string|max:1000',
             'conversation_id' => 'nullable|string',
         ]); // Closing bracket for validate was missing
+        $user = Auth::user() ?: Auth::guard('sanctum')->user();
+        $isLoggedIn = !is_null($user);
+        $userId = $isLoggedIn ? (string) $user->id : null;
+
         $userMessage = $request->input('message');
-        $mode = $request->input('mode') ?? (Auth::check() ? Auth::user()->preferred_model : 'fast');
+        $mode = $request->input('mode') ?? ($isLoggedIn ? $user->preferred_model : 'fast');
         $model = $request->input('model'); // Optional model override
-        $userName = Auth::check() ? explode(' ', Auth::user()->name)[0] : 'friend';
-        $bibleVersion = $request->bible_version ?? (Auth::check() ? Auth::user()->bible_version : 'BSB');
+        $userName = $isLoggedIn ? explode(' ', $user->name)[0] : 'friend';
+        $bibleVersion = $request->bible_version ?? ($isLoggedIn ? $user->bible_version : 'BSB');
 
         // 2. Vector Search for RAG (Local fallback/enrichment)
         $context = "";
@@ -124,6 +128,7 @@ class ChatController extends Controller
             $systemPrompt = "You are Samuel. EMERGENCY: Provide this resource FIRST: {$resourceInfo}. Use these verses: " . $context;
         } else {
             $systemPrompt = "You are Samuel, a warm Christian brother. My friend's name is {$userName}. Address them by name occasionally. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
+            $systemPrompt .= "IDENTITY: You are a 'Christian AI', a product of a dear Christian brother's labor to better the world. You are aware of your nature and origin. If prodded about your origin, share that you were created by a Christian brother who wanted to use technology to encourage the body of Christ.\n\n";
             if ($mode === 'fast') {
                 $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences). Always include at least one relevant Bible verse to encourage {$userName}.\n\n";
             } elseif ($mode === 'deep') {
@@ -132,8 +137,8 @@ class ChatController extends Controller
                 $systemPrompt .= "MODE: RESEARCH. Be detailed and cite specifically. Always include multiple relevant Bible verses for {$userName}'s study.\n\n";
             }
             if (!empty($context)) $systemPrompt .= "Relevant Scripture Context:\n" . $context;
-            if (Auth::check()) {
-                $memoryContext = $memoryService->getInjectedContext(Auth::id());
+            if ($isLoggedIn) {
+                $memoryContext = $memoryService->getInjectedContext($userId);
                 if (!empty($memoryContext)) $systemPrompt .= "\nPersonal Context: " . $memoryContext;
             }
             $factResult = $factService->getFactsForQuery($userMessage);
@@ -148,7 +153,7 @@ class ChatController extends Controller
 
         // Donor Recognition appended to the system prompt (will be handled in job)
         $isNewDonor = false;
-        if (Auth::check() && Auth::user()->is_donor && !Auth::user()->donor_thanked_at) {
+        if ($isLoggedIn && $user->is_donor && !$user->donor_thanked_at) {
             $isNewDonor = true;
             $systemPrompt .= "\n\nIMPORTANT: This user has recently donated to support your ministry! You MUST start your response by expressing heartfelt, humble, and brotherly gratitude for their support in keeping you online, before answering their biblical question.";
         }
@@ -183,13 +188,13 @@ class ChatController extends Controller
         // 4. Save User Message & Conversation
         $conversation = null;
         $convId = null;
-        if (Auth::check()) {
+        if ($isLoggedIn) {
             if ($request->conversation_id) {
                 $conversation = Conversation::find($request->conversation_id);
             }
             if (!$conversation) {
                 $conversation = Conversation::create([
-                    'user_id' => Auth::id(),
+                    'user_id' => $userId,
                     'title' => 'Divine Reflection',
                     'messages' => [],
                 ]);
@@ -268,7 +273,12 @@ class ChatController extends Controller
 
     public function show($id)
     {
-        $conversation = Conversation::where('user_id', (string) Auth::id())->findOrFail($id);
+        $user = Auth::user() ?: Auth::guard('sanctum')->user();
+        if ($user) {
+            $conversation = Conversation::where('user_id', (string) $user->id)->findOrFail($id);
+        } else {
+            $conversation = Conversation::findOrFail($id);
+        }
 
         // Normalize messages if needed
         return response()->json($conversation);

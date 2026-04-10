@@ -36,3 +36,11 @@ This document tracks the current technical infrastructure and service providers 
 - **Main App**: [chatwithsamuel.org](https://chatwithsamuel.org)
 - **Blog**: [blog.chatwithsamuel.org](https://blog.chatwithsamuel.org)
 - **Admin**: [admin.chatwithsamuel.org](https://admin.chatwithsamuel.org)
+
+## Cloud Hosting (Live)
+- **Provider**: DigitalOcean (VPS)
+- **IP Address**: `159.89.109.15`
+- **User**: `samuel`
+- **SSH Command**: `ssh samuel@159.89.109.15`
+- **Password**: `encomm.co.ke`
+- **Status**: **LIVE**
