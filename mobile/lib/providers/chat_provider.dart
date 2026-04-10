@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+import 'dart:convert';
 
 class ChatProvider extends ChangeNotifier {
   final ApiService _apiService;
@@ -10,8 +12,10 @@ class ChatProvider extends ChangeNotifier {
   
   String _selectedMode = 'fast';
   String _selectedBibleVersion = 'BSB';
+  String _typingStatus = 'Samuel is searching the scriptures for you...';
   List<dynamic> _conversations = [];
   int _remainingImages = 0;
+  final PusherChannelsFlutter _pusher = PusherChannelsFlutter.getInstance();
 
   ChatProvider(this._apiService);
 
@@ -20,6 +24,7 @@ class ChatProvider extends ChangeNotifier {
   bool get isTyping => _isTyping;
   String get selectedMode => _selectedMode;
   String get selectedBibleVersion => _selectedBibleVersion;
+  String get typingStatus => _typingStatus;
   List<dynamic> get conversations => _conversations;
   int get remainingImages => _remainingImages;
 
@@ -30,7 +35,34 @@ class ChatProvider extends ChangeNotifier {
 
   set selectedBibleVersion(String value) {
     _selectedBibleVersion = value;
+    _isTyping = false;
+    _typingStatus = 'Samuel is searching the scriptures for you...';
     notifyListeners();
+  }
+
+  void connectToPusher(String userId) async {
+    if (_activeConversationId != null && _pusher.isActive) return;
+    _initPusher(userId);
+  }
+
+  void _initPusher(String userId) async {
+    try {
+      await _pusher.init(
+        apiKey: "bibleai_key",
+        cluster: "mt1",
+        onEvent: (PusherEvent event) {
+          if (event.eventName == '.App\\Events\\MessageStatusUpdated') {
+            final data = jsonDecode(event.data);
+            _typingStatus = data['status'];
+            notifyListeners();
+          }
+        },
+      );
+      await _pusher.subscribe(channelName: "private-user.$userId");
+      await _pusher.connect();
+    } catch (e) {
+      print("Pusher Error: $e");
+    }
   }
 
   Future<void> loadConversations() async {
@@ -43,7 +75,7 @@ class ChatProvider extends ChangeNotifier {
     if (prefs != null) {
       if (prefs['bible_version'] != null) _selectedBibleVersion = prefs['bible_version'];
       if (prefs['preferred_mode'] != null) _selectedMode = prefs['preferred_mode'];
-      if (prefs['remaining_images'] != null) _remainingImages = prefs['remaining_images'];
+      _remainingImages = prefs['remaining_images'] ?? 0;
       notifyListeners();
     }
   }
@@ -68,6 +100,7 @@ class ChatProvider extends ChangeNotifier {
     final userMsg = Message(role: 'user', content: text);
     _messages.add(userMsg);
     _isTyping = true;
+    _typingStatus = 'Samuel is reflecting on your heart...';
     notifyListeners();
 
     final result = await _apiService.sendMessage(

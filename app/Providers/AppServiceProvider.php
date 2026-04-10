@@ -13,11 +13,15 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\App\Services\AiServiceInterface::class, function ($app) {
-            $provider = env('AI_PROVIDER', 'runpod');
+            $provider = env('AI_PROVIDER', 'gemini');
             if ($provider === 'gemini') {
                 return $app->make(\App\Services\GeminiService::class);
             }
             return $app->make(\App\Services\OllamaService::class);
+        });
+
+        $this->app->singleton(\App\Services\IntentClassificationService::class, function ($app) {
+            return new \App\Services\IntentClassificationService($app->make(\App\Services\AiServiceInterface::class));
         });
     }
 

@@ -21,6 +21,7 @@ const sidebarConversations = ref(props.conversations || []);
 const activeConversationId = ref(null);
 const newMessage = ref('');
 const isTyping = ref(false);
+const typingStatus = ref('Samuel is searching the scriptures for you...');
 const showUserDropdown = ref(false);
 const showMobileMenu = ref(false);
 const selectedMode = ref(props.userPreferences?.preferred_mode || 'fast');
@@ -98,6 +99,7 @@ const sendMessage = () => {
     const userMsg = newMessage.value;
     newMessage.value = '';
     isTyping.value = true;
+    typingStatus.value = 'Samuel is reflecting on your heart...';
     
     // Send to backend
     axios.post(route('chat.send'), {
@@ -336,6 +338,16 @@ watch(messages, () => {
 
 watch(activeConversationId, () => {
     scrollToBottom();
+});
+
+onMounted(() => {
+    scrollToBottom();
+    if (props.auth.user) {
+        window.Echo.private(`user.${props.auth.user.id}`)
+            .listen('.App\\Events\\MessageStatusUpdated', (e) => {
+                typingStatus.value = e.status;
+            });
+    }
 });
 
 const startEditingTitle = (conv) => {
@@ -783,7 +795,7 @@ onMounted(() => {
             <div v-if="isTyping" class="flex justify-start">
                 <div class="bg-white text-stone-500 border border-stone-100 rounded-3xl rounded-tl-none px-6 py-4 shadow-md flex items-center space-x-3 transition-all animate-pulse">
                     <i class="fas fa-circle-notch fa-spin text-sm text-purple-700"></i>
-                    <span class="text-sm font-['Gentium_Book_Plus'] italic tracking-wide">Samuel is searching the scriptures for you...</span>
+                    <span class="text-sm font-['Gentium_Book_Plus'] italic tracking-wide">{{ typingStatus }}</span>
                 </div>
             </div>
         </main>

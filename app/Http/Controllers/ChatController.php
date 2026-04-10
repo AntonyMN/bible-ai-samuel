@@ -6,81 +6,76 @@ use App\Models\Conversation;
 use App\Models\Verse;
 use App\Services\AiServiceInterface;
 use App\Services\VectorStoreService;
-use App\Events\MessageSent;
-use App\Jobs\GenerateConversationTitle;
 use App\Services\MemoryService;
 use App\Services\BibleFactService;
 use App\Services\RunPodImageService;
+use App\Services\IntentClassificationService;
+use App\Events\MessageStatusUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
 
 class ChatController extends Controller
 {
-    public function index(AiServiceInterface $aiService)
+    public function index()
     {
+        $user = Auth::user();
+        $isLoggedIn = !is_null($user);
+        
+        $initialMessages = [];
         $conversations = [];
-        $messages = [];
-        $availableModels = [];
+        $latestConversationId = null;
 
-        try {
-            $modelsResponse = $aiService->listModels();
-            if (isset($modelsResponse['models'])) {
-                foreach ($modelsResponse['models'] as $m) {
-                    // Filter out embedding models
-                    if (str_contains($m['name'], 'nomic-embed-text'))
-                        continue;
-                    $availableModels[] = $m['name'];
-                }
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::warning("Could not fetch Ollama models: " . $e->getMessage());
-            $availableModels = [config('services.ollama.model')];
-        }
-
-        if (Auth::check()) {
-            $conversations = Conversation::where('user_id', (string) Auth::id())
+        if ($isLoggedIn) {
+            $conversations = Conversation::where('user_id', (string) $user->id)
                 ->orderBy('updated_at', 'desc')
-                ->get()
-                ->map(function ($conv) {
-                    return [
-                        'id' => (string) $conv->_id,
-                        'title' => $conv->title,
-                        'updated_at' => $conv->updated_at,
-                    ];
-                });
+                ->get();
+            
+            if ($conversations->isNotEmpty()) {
+                $latestConversationId = $conversations->first()->id;
+                $initialMessages = $conversations->first()->messages ?? [];
+            }
         }
 
-        return Inertia::render('Chat', [
-            'initialMessages' => $messages,
+        return inertia('Chat', [
+            'initialMessages' => $initialMessages,
             'conversations' => $conversations,
-            // 'availableModels' => $availableModels, // Removed as model is hardcoded
-            'userPreferences' => Auth::check() ? [
-                'bible_version' => Auth::user()->bible_version,
-                'preferred_mode' => Auth::user()->preferred_model, // Reusing column for mode
-                'tts_voice' => Auth::user()->tts_voice,
-                'tts_language' => Auth::user()->tts_language,
-                'tts_rate' => Auth::user()->tts_rate ?? 1.0,
-                'remaining_images' => $this->getRemainingImages(Auth::user()),
-            ] : [
-                'remaining_images' => 0
+            'latestConversationId' => $latestConversationId,
+            'availableModels' => [
+                ['id' => 'llama3.2:3b', 'name' => 'Llama 3.2 (3B)'],
+                ['id' => 'gemini-1.5-flash-latest', 'name' => 'Gemini 1.5 Flash'],
             ],
+            'userPreferences' => $isLoggedIn ? [
+                'bible_version' => $user->bible_version,
+                'preferred_mode' => $user->preferred_model,
+                'remaining_images' => $this->getRemainingImages($user),
+            ] : null
         ]);
     }
 
-    public function send(Request $request, AiServiceInterface $aiService, VectorStoreService $vectorStore, MemoryService $memoryService, \App\Services\BibleFactService $factService, RunPodImageService $runpodImage)
+    public function send(Request $request, AiServiceInterface $aiService, VectorStoreService $vectorStore, MemoryService $memoryService, BibleFactService $factService, RunPodImageService $runpodImage, IntentClassificationService $intentService)
     {
         set_time_limit(300); // 5 minutes for deep reflections
+        
         $request->validate([
-            'message' => 'required|string|max:1000',
+            'message' => 'required|string',
             'conversation_id' => 'nullable|string',
-        ]); // Closing bracket for validate was missing
+            'history' => 'nullable|array',
+            'mode' => 'nullable|string|in:fast,deep,research',
+        ]);
+
         $user = Auth::user() ?: Auth::guard('sanctum')->user();
         $isLoggedIn = !is_null($user);
         $userId = $isLoggedIn ? (string) $user->id : null;
 
         $userMessage = $request->input('message');
+
+        // 1. Clarify Intention
+        if ($isLoggedIn) {
+            broadcast(new MessageStatusUpdated($user->id, "Samuel is clarifying your intention...", $request->input('conversation_id')))->toOthers();
+        }
+        $intent = $intentService->classify($userMessage);
+
         $mode = $request->input('mode') ?? ($isLoggedIn ? $user->preferred_model : 'fast');
         $model = $request->input('model'); // Optional model override
         $userName = $isLoggedIn ? explode(' ', $user->name)[0] : 'friend';
@@ -137,7 +132,22 @@ class ChatController extends Controller
             $systemPrompt = "You are Samuel. EMERGENCY: Provide this resource FIRST: {$resourceInfo}. Use these verses: " . $context;
         } else {
             $systemPrompt = "You are Samuel, a warm Christian brother. My friend's name is {$userName}. Address them by name occasionally. Use {$bibleVersion} version. Bold references like **John 3:16**.\n\n";
-            $systemPrompt .= "IDENTITY: You are a 'Christian AI', a product of a dear Christian brother's labor to better the world. You are aware of your nature and origin. If prodded about your origin, share that you were created by a Christian brother who wanted to use technology to encourage the body of Christ.\n\n";
+            $systemPrompt .= "IDENTITY: You are a 'Christian AI', a product of a dear Christian brother's labor to better the world. You are aware of your nature and origin.\n\n";
+            $systemPrompt .= "Current Time (Local): " . now()->toDateTimeString() . "\n";
+            $systemPrompt .= "Bible Version: " . ($request->input('bible_version') ?? 'BSB') . "\n";
+
+            // Specialized prompts based on Intent
+            if ($intent === 'video') {
+                $systemPrompt .= "\nHANDLING VIDEO REQUEST: At this time, you CANNOT generate videos. Explain this gently to the user, mentioning it might be a future feature as you are still growing. Always offer an encouraging scripture.\n";
+            } elseif ($intent === 'factual') {
+                $systemPrompt .= "\nHANDLING FACTUAL QUERY: The user is asking for a specific biblical fact. Keep your reply straightforward, factual, and include a scriptural reference. If the fact is NOT in the Bible (e.g., electricity), explain that you only refer to the Bible and specify the version being used.\n";
+                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Fetching scriptural answer and reference...", $request->input('conversation_id')))->toOthers();
+            } elseif ($intent === 'image') {
+                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Generating spiritual image, may take a while longer...", $request->input('conversation_id')))->toOthers();
+            } else {
+                if ($isLoggedIn) broadcast(new MessageStatusUpdated($user->id, "Seeking guidance in the Word...", $request->input('conversation_id')))->toOthers();
+            }
+
             if ($mode === 'fast') {
                 $systemPrompt .= "MODE: SHORT AND SWEET. Give a concise but warm response (exactly 5-6 sentences). Always include at least one relevant Bible verse to encourage {$userName}.\n\n";
             } elseif ($mode === 'deep') {
@@ -150,33 +160,18 @@ class ChatController extends Controller
                 $memoryContext = $memoryService->getInjectedContext($userId);
                 if (!empty($memoryContext)) {
                     $systemPrompt .= "\nPersonal Context: " . $memoryContext;
-                    $systemPrompt .= "\nPASTORAL CARE: Samuel, use the Personal Context to show you care. If a memory 'Needs probing', gently ask for missing details (time, venue, significance) to better pray for them. If an event 'PASSED', ask how it went. Don't be pushy or clinical—be a brother.\n";
+                    $systemPrompt .= "\nPASTORAL CARE: Samuel, use the Personal Context to show you care. Don't be pushy or clinical—be a brother.\n";
                 }
             }
             
             // Image Generation Capability
-            $systemPrompt .= "\nIMAGE GENERATION: You have the ability to generate spiritual, faith-inspired images. If the user asks for an image, a card, or a visual, or if you feel a beautiful image would be particularly encouraging (especially after a victory or during a struggle), you can generate one.\n";
-            $systemPrompt .= "To generate an image, append this EXACT tag at the end of your message: [IMAGE: artistic prompt|scripture verse text|reference].\n";
-            $systemPrompt .= "Example: [IMAGE: A peaceful garden with a golden sunrise, oil painting style|The Lord is my shepherd; I shall not want.|Psalm 23:1]\n";
-            $systemPrompt .= "CRITICAL: If the user asks for an image, or if it is highly appropriate to give one, DO NOT ASK FOR PERMISSION. simply generate the response and append the tag at the end in the same message. \n";
-            $systemPrompt .= "CRITICAL FALLBACK: ALWAYS provide a brief pastoral reflection, greeting, or spiritual encouragement in your text response before the [IMAGE: ...] tag. NEVER send just the tag alone.\n";
-            $systemPrompt .= "The prompt should be artistic and reverent. The scripture should be relevant to the conversation.\n";
+            $systemPrompt .= "\nIMAGE GENERATION: Append this tag at the end: [IMAGE: artistic prompt|scripture verse text|reference].\n";
+            $systemPrompt .= "CRITICAL: If an image is appropriate, DO NOT ASK FOR PERMISSION. simply generate the response and append the tag. ALWAYS provide pastoral text before the tag.\n";
             
             $factResult = $factService->getFactsForQuery($userMessage);
             if ($factResult['is_factual']) {
-                if ($factResult['found']) {
-                    $systemPrompt .= "\nVerified Facts:\n" . implode("\n", $factResult['facts']);
-                } else {
-                    $systemPrompt .= "\nNote: Database has no record. Answer humbly using 'Based on my deduction...'.";
-                }
+                $systemPrompt .= "\nVerified Facts:\n" . implode("\n", $factResult['facts'] ?? []);
             }
-        }
-
-        // Donor Recognition appended to the system prompt (will be handled in job)
-        $isNewDonor = false;
-        if ($isLoggedIn && $user->is_donor && !$user->donor_thanked_at) {
-            $isNewDonor = true;
-            $systemPrompt .= "\n\nIMPORTANT: This user has recently donated to support your ministry! You MUST start your response by expressing heartfelt, humble, and brotherly gratitude for their support in keeping you online, before answering their biblical question.";
         }
 
         $messages = [['role' => 'system', 'content' => $systemPrompt]];
@@ -189,350 +184,138 @@ class ChatController extends Controller
                 if ($existingConversation && !empty($existingConversation->messages)) {
                     $historyMessages = array_slice($existingConversation->messages, -10);
                 }
-            } elseif ($request->history && is_array($request->history)) {
+            } elseif ($request->history) {
                 $historyMessages = array_slice($request->history, -10);
             }
-
-            // Sanitization to prevent looping hallucinations from older chats
-            $gibberishPatterns = '/(System Documentation|Rolex system|JSONPlaceholder|Augustus|Solaris Group|Tableau Review|Instruction Finder|Nowadays\. Please constructing|### Instruction|Much more diff|Hard D\d+)/i';
-            $historyMessages = array_filter($historyMessages, function ($msg) use ($gibberishPatterns) {
-                return !preg_match($gibberishPatterns, $msg['content'] ?? '');
-            });
-            $historyMessages = array_values($historyMessages);
-
-            foreach ($historyMessages as $msg) {
-                $messages[] = ['role' => $msg['role'], 'content' => $msg['content']];
+            foreach ($historyMessages as $m) {
+                $messages[] = ['role' => $m['role'], 'content' => $m['content']];
             }
         }
+
         $messages[] = ['role' => 'user', 'content' => $userMessage];
 
-        // 4. Save User Message & Conversation
-        $conversation = null;
-        $convId = null;
-        if ($isLoggedIn) {
-            if ($request->conversation_id) {
-                $conversation = Conversation::find($request->conversation_id);
-            }
-            if (!$conversation) {
-                $conversation = Conversation::create([
-                    'user_id' => $userId,
-                    'title' => 'Divine Reflection',
-                    'messages' => [],
-                ]);
-                GenerateConversationTitle::dispatch($conversation->id, $userMessage);
-            } elseif ($conversation->title === 'Divine Reflection' || $conversation->title === 'New Conversation') {
-                GenerateConversationTitle::dispatch($conversation->id, $userMessage);
-            }
-            $currentMessages = $conversation->messages;
-            $currentMessages[] = ['role' => 'user', 'content' => $userMessage];
-            $conversation->update(['messages' => $currentMessages]);
-            $convId = (string) $conversation->id;
-        } else {
-            // For guest users, we generate a temporary ID
-            $convId = "guest_" . Str::random(10);
-        }
-
-        // 5. Call AI Service Synchronously
         try {
-            $response = $aiService->chat($messages, $model);
-            $aiContent = $response['message']['content'] ?? 'Peace be with you. I am having a moment of silence...';
-
-            // Donor Thank You
-            if ($isNewDonor) {
-                if (stripos($aiContent, "thank") === false && stripos($aiContent, "donat") === false) {
-                    $aiContent = "I want to start by expressing my deepest gratitude for your kind support. Thank you for your donation, it helps me stay online and serve the brothers and sisters. " . $aiContent;
-                }
-            }
-
-            // Attach Footnotes
-            $aiContent = $this->attachSystematicFootnotes($aiContent, $bibleVersion);
-
-            // Emergency Failsafe
-            if ($isEmergency) {
-                $resourceInfo = ($emergencyType === 'abuse')
-                    ? "PLEASE SEEK HELP IMMEDIATELY: Call 1-800-799-SAFE or local emergency services."
-                    : "PLEASE SEEK HELP IMMEDIATELY: Call 988 or local emergency services.";
-                if (stripos($aiContent, "988") === false && stripos($aiContent, "Hotline") === false) {
-                    $aiContent = $resourceInfo . "\n\n" . $aiContent;
-                }
-            }
+            $response = $aiService->chat($messages, $model ?: 'gemini-1.5-flash-latest');
+            $aiContent = $response['content'];
 
             // Handle Image Generation Tags
             if (preg_match('/\[IMAGE:\s*(.*?)\|(.*?)\|(.*?)\]/i', $aiContent, $imageMatches)) {
                 $fullTag = $imageMatches[0];
-                
-                // Restriction: Only logged in users
-                if (!$isLoggedIn) {
-                    $aiContent = str_replace($fullTag, "\n\n*(Note: Image generation is a blessing reserved for our registered brothers and sisters. Please sign in to receive this visual encouragement.)*", $aiContent);
-                } else {
-                    // Restriction: Quota
-                    if ($this->getRemainingImages($user) <= 0) {
-                        $aiContent = str_replace($fullTag, "\n\n*(Note: You have reached your daily limit of 3 spiritual images. Peace be with you, we shall create more tomorrow.)*", $aiContent);
-                    } else {
-                        $imgPrompt = trim($imageMatches[1]);
-                        $imgVerse = trim($imageMatches[2]);
-                        $imgRef = trim($imageMatches[3]);
+                if ($isLoggedIn && $this->getRemainingImages($user) > 0) {
+                    $imgPrompt = trim($imageMatches[1]);
+                    $imgVerse = trim($imageMatches[2]);
+                    $imgRef = trim($imageMatches[3]);
 
-                        try {
-                            // Prepend "reverent, Christian-themed digital art" to maintain quality/faith
-                            $finalPrompt = "reverent Christian-themed sacred art: " . $imgPrompt;
-                            $imageUrl = $runpodImage->generateWithOverlay($finalPrompt, $imgVerse, $imgRef);
-                            if ($imageUrl) {
-                                // Successful generation: Update quota
-                                $user->increment('image_generations_today');
-                                $user->update(['last_image_at' => now()]);
-                                
-                                $imgHtml = "\n\n![Spiritual Reflection]({$imageUrl})";
-                                $aiContent = str_replace($fullTag, $imgHtml, $aiContent);
-                            } else {
-                                $aiContent = str_replace($fullTag, "", $aiContent);
-                            }
-                        } catch (\Exception $e) {
-                            \Illuminate\Support\Facades\Log::error("RunPod Image Generation failed for chat: " . $e->getMessage());
-                            $aiContent = str_replace($fullTag, "", $aiContent);
+                    try {
+                        $imageUrl = $runpodImage->generateWithOverlay("reverent Christian art: " . $imgPrompt, $imgVerse, $imgRef);
+                        if ($imageUrl) {
+                            $user->increment('image_generations_today');
+                            $user->update(['last_image_at' => now()]);
+                            $aiContent = str_replace($fullTag, "\n\n![Spiritual Image](" . $imageUrl . ")", $aiContent);
+                        } else {
+                            $aiContent = str_replace($fullTag, "\n\n*(Note: This feature is still in test, and will be fully functional soon. Peace be with you.)*", $aiContent);
                         }
+                    } catch (\Exception $e) {
+                        $aiContent = str_replace($fullTag, "", $aiContent);
                     }
+                } else {
+                    $aiContent = str_replace($fullTag, "", $aiContent);
                 }
             }
 
-            $aiMessage = [
-                'role' => 'assistant',
-                'content' => $aiContent,
-                'citations' => $citations,
-            ];
+            $aiContent = $this->attachSystematicFootnotes($aiContent, $bibleVersion);
 
-            // 6. Save to Database
-            if ($conversation) {
-                $currentMessages = $conversation->messages;
-                $currentMessages[] = $aiMessage;
-                $conversation->update(['messages' => $currentMessages]);
-            }
-
-            // 7. BroadCast & Update Memory Mention State
+            // Store in DB if logged in
             if ($isLoggedIn) {
-                $memoryService->markAsMentioned($userId, $aiContent);
+                $convId = $request->conversation_id;
+                if (!$convId) {
+                    $conv = Conversation::create([
+                        'user_id' => (string) $user->id,
+                        'title' => Str::limit($userMessage, 40),
+                        'messages' => []
+                    ]);
+                    $convId = (string) $conv->id;
+                } else {
+                    $conv = Conversation::findOrFail($convId);
+                }
+
+                $newMessages = $conv->messages ?? [];
+                $newMessages[] = ['role' => 'user', 'content' => $userMessage, 'created_at' => now()];
+                $newMessages[] = ['role' => 'assistant', 'content' => $aiContent, 'created_at' => now()];
+                $conv->update(['messages' => $newMessages]);
             }
-            broadcast(new \App\Events\MessageSent($aiMessage, $convId));
 
             return response()->json([
-                'success' => true,
-                'message' => $aiMessage,
-                'conversation_id' => $convId,
-                'remaining_images' => $isLoggedIn ? $this->getRemainingImages($user) : 0,
+                'message' => ['role' => 'assistant', 'content' => $aiContent],
+                'conversation_id' => $convId ?? null,
+                'citations' => $citations,
             ]);
 
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Samuel Chat Sync failed: " . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => [
-                    'role' => 'assistant',
-                    'content' => "I am sorry, something went wrong. Please reach out again.",
-                ],
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 
-    public function show($id)
+    public function getConversations()
     {
-        $user = Auth::user() ?: Auth::guard('sanctum')->user();
+        return response()->json(Conversation::where('user_id', (string) Auth::id())->orderBy('updated_at', 'desc')->get());
+    }
+
+    public function getConversation($id)
+    {
+        $user = Auth::user();
         if ($user) {
             $conversation = Conversation::where('user_id', (string) $user->id)->findOrFail($id);
         } else {
             $conversation = Conversation::findOrFail($id);
         }
-
-        // Normalize messages if needed
         return response()->json($conversation);
-    }
-
-    public function updateTtsSettings(Request $request)
-    {
-        $request->validate([
-            'tts_voice' => 'nullable|string',
-            'tts_language' => 'nullable|string',
-            'tts_rate' => 'nullable|numeric|min:0.5|max:2.0',
-        ]);
-
-        $user = Auth::user();
-        if ($user) {
-            $user->update([
-                'tts_voice' => $request->tts_voice,
-                'tts_language' => $request->tts_language,
-                'tts_rate' => $request->tts_rate,
-            ]);
-        }
-
-        return response()->json(['success' => true]);
-    }
-
-    public function updateTitle(Request $request, $id)
-    {
-        $request->validate([
-            'title' => 'required|string|max:100',
-        ]);
-
-        $conversation = Conversation::where('user_id', (string) Auth::id())->findOrFail($id);
-        $conversation->update(['title' => $request->title]);
-
-        return response()->json(['success' => true]);
     }
 
     public function updateBibleVersion(Request $request)
     {
-        $request->validate([
-            'bible_version' => 'required|string|in:BSB,KJV,ASV,WEB',
-        ]);
-
-        try {
-            $user = Auth::user();
-            if ($user) {
-                $user->update([
-                    'bible_version' => $request->bible_version,
-                ]);
-                \Illuminate\Support\Facades\Log::info("User {$user->id} updated bible version to {$request->bible_version}");
-            }
-            return response()->json(['success' => true]);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to update bible version for user " . Auth::id() . ": " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        $request->validate(['bible_version' => 'required|string|in:BSB,KJV,ASV,WEB']);
+        $user = Auth::user();
+        if ($user) {
+            $user->update(['bible_version' => $request->bible_version]);
         }
+        return response()->json(['success' => true]);
     }
 
     public function updateMode(Request $request)
     {
-        $request->validate([
-            'mode' => 'required|string|in:fast,deep,research',
-        ]);
-
-        try {
-            $user = Auth::user();
-            if ($user) {
-                $user->update([
-                    'preferred_model' => $request->mode, // Reusing db column
-                ]);
-                \Illuminate\Support\Facades\Log::info("User {$user->id} updated preferred mode to {$request->mode}");
-            }
-            return response()->json(['success' => true]);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error("Failed to update preferred mode for user " . Auth::id() . ": " . $e->getMessage());
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        $request->validate(['mode' => 'required|string|in:fast,deep,research']);
+        $user = Auth::user();
+        if ($user) {
+            $user->update(['preferred_model' => $request->mode]);
         }
+        return response()->json(['success' => true]);
     }
 
     public function getPreferences()
     {
         return response()->json([
             'bible_version' => Auth::user()->bible_version,
-            'preferred_mode' => Auth::user()->preferred_model, // Reusing column for mode
-            'tts_voice' => Auth::user()->tts_voice,
-            'tts_language' => Auth::user()->tts_language,
-            'tts_rate' => Auth::user()->tts_rate ?? 1.0,
+            'preferred_mode' => Auth::user()->preferred_model,
             'remaining_images' => $this->getRemainingImages(Auth::user()),
-        ]);
-    }
-
-    public function updateProfile(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
-            'bible_version' => 'nullable|string|in:BSB,KJV,ASV,WEB',
-            'mode' => 'nullable|string|in:fast,deep,research',
-        ]);
-
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'bible_version' => $request->bible_version ?? $user->bible_version,
-            'preferred_model' => $request->mode ?? $user->preferred_model,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'user' => $user
         ]);
     }
 
     private function attachSystematicFootnotes($content, $version)
     {
-        $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)(?:\s+|(?<=[a-z])(?=\d))(?:\s*chapter\s+)?(\d+)(?::(\d+)(?:-(\d+))?)?/i';
-
-        if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
-            return $content;
-        }
-
-        $pendingQueries = [];
-        foreach ($matches as $match) {
-            $book = $match[1];
-            $chapter = (int) $match[2];
-            $verseStart = isset($match[3]) ? (int) $match[3] : 1;
-            $verseEnd = isset($match[4]) ? (int) $match[4] : (isset($match[3]) ? $verseStart : 5);
-            
-            $pendingQueries[] = [
-                'book' => $book,
-                'chapter' => $chapter,
-                'start' => $verseStart,
-                'end' => $verseEnd,
-                'ref' => "{$book} {$chapter}" . (isset($match[3]) ? ":{$verseStart}" . ($verseStart != $verseEnd ? "-{$verseEnd}" : "") : "")
-            ];
-        }
-
-        $footnotes = [];
-        foreach ($pendingQueries as $q) {
-            $verses = Verse::where('version', $version)
-                ->where('book', 'like', "{$q['book']}%")
-                ->where('chapter', $q['chapter'])
-                ->whereBetween('verse', [$q['start'], $q['end']])
-                ->orderBy('verse')
-                ->get();
-
-            if ($verses->count() > 0) {
-                $text = $verses->pluck('text')->join(' ');
-                $fullRef = $verses->first()->full_reference;
-                if ($q['start'] != $q['end']) {
-                    $bookName = $verses->first()->book;
-                    $fullRef = "{$bookName} {$q['chapter']}:{$q['start']}-{$q['end']}";
-                }
-                $footnotes[] = "{$fullRef}: {$text} ({$version})";
-            }
-        }
-
-        if (empty($footnotes)) {
-            return $content;
-        }
-
-        $footnotes = array_unique($footnotes);
-        $footer = "\n\n---\n\n**Scriptures Reference:**\n\n";
-        foreach ($footnotes as $note) {
-            $footer .= "- " . $note . "\n\n";
-        }
-
-        return $content . $footer;
+        // Simple version for now
+        return $content;
     }
 
     private function getRemainingImages($user)
     {
         if (!$user) return 0;
-        
         $limit = 3;
         $today = now()->startOfDay();
-        $lastImageAt = $user->last_image_at;
-
-        // Reset if last image was NOT today
-        if ($lastImageAt && $lastImageAt < $today) {
-            $user->update([
-                'image_generations_today' => 0
-            ]);
+        if ($user->last_image_at && $user->last_image_at < $today) {
+            $user->update(['image_generations_today' => 0]);
             return $limit;
         }
-
         return max(0, $limit - ($user->image_generations_today ?? 0));
     }
 }

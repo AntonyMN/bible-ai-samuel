@@ -321,11 +321,29 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       if (_isSpeaking && _speakingIndex == index)
                         const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      chatProvider.typingStatus,
+                                      style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
