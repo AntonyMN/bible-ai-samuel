@@ -27,8 +27,12 @@ class TtsService
     public function generate(string $text, string $outputPath): bool
     {
         try {
+            // Pre-process text to add natural pauses at line breaks (User requirement)
+            // Add a period to any line that ends without terminal punctuation to force a pause in Piper
+            $processedText = preg_replace('/(?<![.!?])\n+/', ". \n", $text);
+            
             // Piper expects text via stdin
-            $process = Process::input($text)
+            $process = Process::input($processedText)
                 ->timeout(60)
                 ->run([
                     $this->piperPath,

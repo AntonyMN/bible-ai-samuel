@@ -39,7 +39,7 @@ Intention:";
                 ['role' => 'user', 'content' => $prompt]
             ], 'gemini-flash-latest');
 
-            $rawContent = $response['content'] ?? 'reflection';
+            $rawContent = $response['message']['content'] ?? $response['content'] ?? 'reflection';
             Log::info("Raw Intention Response: " . $rawContent);
             $intention = strtolower(trim($rawContent));
             

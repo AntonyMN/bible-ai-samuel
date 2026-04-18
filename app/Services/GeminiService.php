@@ -79,10 +79,14 @@ class GeminiService implements AiServiceInterface
             $data = $response->json();
             $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-            // Return in the format the Controller expects
+            // Return in the standardized format expected by PingSamuelCommand, Jobs, etc.
             return [
-                'role' => 'assistant',
-                'content' => trim($text)
+                'message' => [
+                    'role' => 'assistant',
+                    'content' => trim($text)
+                ],
+                'role' => 'assistant', // Temporary backward compatibility
+                'content' => trim($text) // Temporary backward compatibility
             ];
         } catch (\Exception $e) {
             Log::error("Gemini Service Exception: " . $e->getMessage());

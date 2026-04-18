@@ -200,7 +200,7 @@ class ChatController extends Controller
 
         try {
             $response = $aiService->chat($messages, $model ?: 'gemini-flash-latest');
-            $aiContent = $response['content'];
+            $aiContent = $response['message']['content'] ?? $response['content'];
 
             // Handle Image Generation Tags
             if (preg_match('/\[IMAGE:\s*(.*?)\|(.*?)\|(.*?)\]/i', $aiContent, $imageMatches)) {
