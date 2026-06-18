@@ -184,9 +184,11 @@ class ChatController extends Controller
                 }
             }
             
-            // Image Generation Capability
-            $systemPrompt .= "\nIMAGE GENERATION: Append this tag at the end: [IMAGE: artistic prompt|scripture verse text|reference].\n";
-            $systemPrompt .= "CRITICAL: If an image is appropriate, DO NOT ASK FOR PERMISSION. simply generate the response and append the tag. ALWAYS provide pastoral text before the tag.\n";
+            // Image Generation Capability (Only if user intends for an image)
+            if ($intent === 'image') {
+                $systemPrompt .= "\nIMAGE GENERATION: Append this tag at the end: [IMAGE: artistic prompt|scripture verse text|reference].\n";
+                $systemPrompt .= "CRITICAL: If an image is appropriate, DO NOT ASK FOR PERMISSION. simply generate the response and append the tag. ALWAYS provide pastoral text before the tag.\n";
+            }
             
             $factResult = $factService->getFactsForQuery($userMessage);
             if ($factResult['is_factual']) {
@@ -221,26 +223,31 @@ class ChatController extends Controller
             // Handle Image Generation Tags
             if (preg_match('/\[IMAGE:\s*(.*?)\|(.*?)\|(.*?)\]/i', $aiContent, $imageMatches)) {
                 $fullTag = $imageMatches[0];
-                if ($isLoggedIn && $this->getRemainingImages($user) > 0) {
-                    $imgPrompt = trim($imageMatches[1]);
-                    $imgVerse = trim($imageMatches[2]);
-                    $imgRef = trim($imageMatches[3]);
+                if ($intent === 'image') {
+                    if ($isLoggedIn && $this->getRemainingImages($user) > 0) {
+                        $imgPrompt = trim($imageMatches[1]);
+                        $imgVerse = trim($imageMatches[2]);
+                        $imgRef = trim($imageMatches[3]);
 
-                    try {
-                        $imageUrl = $runpodImage->generateWithOverlay("reverent Christian art: " . $imgPrompt, $imgVerse, $imgRef);
-                        if ($imageUrl) {
-                            $user->increment('image_generations_today');
-                            $user->update(['last_image_at' => now()]);
-                            $aiContent = str_replace($fullTag, "\n\n![Spiritual Image](" . $imageUrl . ")", $aiContent);
-                        } else {
-                            $aiContent = str_replace($fullTag, "\n\n*(Note: Image generation is currently undergoing maintenance. Peace be with you.)*", $aiContent);
+                        try {
+                            $imageUrl = $runpodImage->generateWithOverlay("reverent Christian art: " . $imgPrompt, $imgVerse, $imgRef);
+                            if ($imageUrl) {
+                                $user->increment('image_generations_today');
+                                $user->update(['last_image_at' => now()]);
+                                $aiContent = str_replace($fullTag, "\n\n![Spiritual Image](" . $imageUrl . ")", $aiContent);
+                            } else {
+                                $aiContent = str_replace($fullTag, "\n\n*(Note: Image generation is currently undergoing maintenance. Peace be with you.)*", $aiContent);
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("RunPod Image Generation Failed: " . $e->getMessage());
+                            $aiContent = str_replace($fullTag, "\n\n*(Image generation failed momentarily. Please be patient as we improve Samuel's capabilities.)*", $aiContent);
                         }
-                    } catch (\Exception $e) {
-                        Log::error("RunPod Image Generation Failed: " . $e->getMessage());
-                        $aiContent = str_replace($fullTag, "\n\n*(Image generation failed momentarily. Please be patient as we improve Samuel's capabilities.)*", $aiContent);
+                    } else {
+                        $aiContent = str_replace($fullTag, "\n\n*(To see Samuel's generated spiritual images, please log in or create a free account. Peace be with you.)*", $aiContent);
                     }
                 } else {
-                    $aiContent = str_replace($fullTag, "\n\n*(To see Samuel's generated spiritual images, please log in or create a free account. Peace be with you.)*", $aiContent);
+                    // Strip the tag completely and do not mention images if the user did not intend/request an image
+                    $aiContent = str_replace($fullTag, "", $aiContent);
                 }
             }
 
