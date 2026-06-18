@@ -331,8 +331,47 @@ class ChatController extends Controller
 
     private function attachSystematicFootnotes($content, $version)
     {
-        // Simple version for now
-        return $content;
+        $pattern = '/((?:[1-3]\s?)?[A-Z][a-z]+\.?)\s+(\d+):(\d+)(?:-(\d+))?/';
+
+        if (!preg_match_all($pattern, $content, $matches, PREG_SET_ORDER)) {
+            return $content;
+        }
+
+        $footnotes = [];
+        foreach ($matches as $match) {
+            $book = $match[1];
+            $chapter = (int) $match[2];
+            $verseStart = (int) $match[3];
+            $verseEnd = isset($match[4]) ? (int) $match[4] : $verseStart;
+
+            $verses = \App\Models\Verse::where('version', $version)
+                ->where('book', 'like', "{$book}%")
+                ->where('chapter', $chapter)
+                ->whereBetween('verse', [$verseStart, $verseEnd])
+                ->orderBy('verse')
+                ->get();
+
+            if ($verses->count() > 0) {
+                $text = $verses->pluck('text')->join(' ');
+                $fullRef = $verses->first()->full_reference;
+                if ($verseStart != $verseEnd) {
+                    $fullRef = "{$book} {$chapter}:{$verseStart}-{$verseEnd}";
+                }
+                $footnotes[] = "{$fullRef}: {$text} ({$version})";
+            }
+        }
+
+        if (empty($footnotes)) {
+            return $content;
+        }
+
+        $footnotes = array_unique($footnotes);
+        $footer = "\n\n---\n\n**Scriptures Reference:**\n\n";
+        foreach ($footnotes as $note) {
+            $footer .= "- " . $note . "\n\n";
+        }
+
+        return $content . $footer;
     }
 
     private function getRemainingImages($user)

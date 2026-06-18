@@ -33,7 +33,7 @@ class TtsService
             
             // Piper expects text via stdin
             $process = Process::input($processedText)
-                ->timeout(60)
+                ->timeout(300)
                 ->run([
                     $this->piperPath,
                     '--model', $this->modelPath,

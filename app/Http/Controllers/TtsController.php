@@ -25,7 +25,7 @@ class TtsController extends Controller
     public function generate(Request $request)
     {
         $request->validate([
-            'text' => 'required|string|max:2000',
+            'text' => 'required|string|max:10000',
         ]);
 
         $text = $request->input('text');
