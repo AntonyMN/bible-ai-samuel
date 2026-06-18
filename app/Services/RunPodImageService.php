@@ -10,14 +10,13 @@ use Illuminate\Support\Str;
 class RunPodImageService
 {
     protected $apiKey;
-    protected $endpointId;
-
+    protected $model;
     protected $overlayService;
 
     public function __construct(ScriptureOverlayService $overlayService)
     {
-        $this->apiKey = config('services.runpod.api_key');
-        $this->endpointId = config('services.runpod.endpoint_id', 'djxdrz33sby1qu');
+        $this->apiKey = config('services.gemini.api_key');
+        $this->model = 'imagen-4.0-fast-generate-001';
         $this->overlayService = $overlayService;
     }
 
@@ -34,79 +33,57 @@ class RunPodImageService
     }
 
     /**
-     * Generate an image using RunPod SDXL
+     * Generate an image using Google Gemini API Imagen
      */
     public function generateImage(string $prompt)
     {
+        $enhancedPrompt = $this->enhancePrompt($prompt);
+        Log::info("Generating image with Gemini Imagen 4 (Fast). Enhanced Prompt: " . $enhancedPrompt);
+
         try {
-            $response = Http::timeout(300)
-                ->withHeaders(['Authorization' => "Bearer {$this->apiKey}"])
-                ->post("https://api.runpod.ai/v2/{$this->endpointId}/run", [
-                    'input' => [
-                        'prompt' => $prompt,
-                        'num_inference_steps' => 25,
-                        'guidance_scale' => 7.5,
-                        'width' => 1024,
-                        'height' => 1024,
+            $response = Http::timeout(60)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:predict?key={$this->apiKey}", [
+                    'instances' => [
+                        [
+                            'prompt' => $enhancedPrompt
+                        ]
+                    ],
+                    'parameters' => [
+                        'sampleCount' => 1,
+                        'aspectRatio' => '1:1',
+                        'outputMimeType' => 'image/png'
                     ]
                 ]);
 
             if ($response->failed()) {
-                throw new \Exception("RunPod SDXL request failed: " . $response->body());
+                throw new \Exception("Gemini Imagen request failed: " . $response->body());
             }
 
-            $job = $response->json();
-            $jobId = $job['id'];
-            
-            Log::info("RunPod SDXL Job Started: {$jobId}");
+            $data = $response->json();
+            $base64Image = $data['predictions'][0]['bytesBase64Encoded'] ?? null;
 
-            // Poll for completion
-            $attempts = 0;
-            while ($attempts < 60) {
-                sleep(5);
-                $statusResponse = Http::withHeaders(['Authorization' => "Bearer {$this->apiKey}"])
-                    ->get("https://api.runpod.ai/v2/{$this->endpointId}/status/{$jobId}");
-
-                $statusJson = $statusResponse->json();
-                $status = $statusJson['status'] ?? 'UNKNOWN';
-                
-                Log::info("RunPod SDXL Job ({$jobId}) Status: {$status}");
-
-                if ($status === 'COMPLETED') {
-                    Log::info("Full RunPod Status: " . json_encode($statusJson));
-                    $output = $statusJson['output'];
-                    $imageUrl = $output['image_url'] ?? $output[0] ?? null;
-                    
-                    // If we have a base64 string in imageUrl/output[0], save it
-                    if ($imageUrl && str_starts_with($imageUrl, 'data:image')) {
-                        return $this->saveBase64Image($imageUrl);
-                    }
-
-                    // Fallback to images array if available
-                    if (!$imageUrl && isset($output['images'][0])) {
-                         return $this->saveBase64Image($output['images'][0]);
-                    }
-                    
-                    if (!$imageUrl) {
-                        throw new \Exception("No image URL found in completed job output: " . json_encode($output));
-                    }
-                    
-                    return $imageUrl;
-                }
-
-                if ($status === 'FAILED') {
-                    throw new \Exception("RunPod job failed: " . json_encode($statusJson));
-                }
-
-                $attempts++;
+            if (!$base64Image) {
+                throw new \Exception("No image data found in prediction response: " . json_encode($data));
             }
 
-            throw new \Exception("RunPod job timed out after polling for 300 seconds.");
+            Log::info("Gemini Imagen image generation successful.");
+            return $this->saveBase64Image($base64Image);
 
         } catch (\Exception $e) {
-            Log::error("RunPod Image Generation Error: " . $e->getMessage());
+            Log::error("Gemini Imagen Generation Error: " . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Enhance prompt with Samuel's artistic taste/style
+     */
+    protected function enhancePrompt(string $prompt): string
+    {
+        // Strip out "reverent Christian art:" prefix if already present to prevent duplication
+        $cleanPrompt = preg_replace('/^reverent Christian art:\s*/i', '', $prompt);
+        
+        return "reverent Christian art, classical biblical oil painting style, warm soft natural lighting, peaceful, sacred atmosphere, detailed realism, spiritual, holy, high-quality masterpiece: " . $cleanPrompt;
     }
 
     protected function saveBase64Image($base64String)
