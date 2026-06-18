@@ -87,14 +87,22 @@ class ProcessSamuelResponse implements ShouldQueue
             }
 
             // 6. Broadcast via Reverb
-            broadcast(new MessageSent($aiMessage, $this->conversationId));
+            try {
+                broadcast(new MessageSent($aiMessage, $this->conversationId));
+            } catch (\Exception $e) {
+                Log::warning("Broadcasting MessageSent failed: " . $e->getMessage());
+            }
 
         } catch (\Exception $e) {
             Log::error("ProcessSamuelResponse failed: " . $e->getMessage());
-            broadcast(new MessageSent([
-                'role' => 'assistant',
-                'content' => "I am sorry, something went wrong. Please reach out again.",
-            ], $this->conversationId));
+            try {
+                broadcast(new MessageSent([
+                    'role' => 'assistant',
+                    'content' => "I am sorry, something went wrong. Please reach out again.",
+                ], $this->conversationId));
+            } catch (\Exception $ex) {
+                Log::warning("Broadcasting fallback MessageSent failed: " . $ex->getMessage());
+            }
         }
     }
 

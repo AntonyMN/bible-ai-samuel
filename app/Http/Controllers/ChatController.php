@@ -75,7 +75,11 @@ class ChatController extends Controller
         $conversationId = $request->input('conversation_id', 'new');
         
         // Broadcast status to everyone (guests included) via the conversation channel
-        broadcast(new MessageStatusUpdated($user ? $user->id : null, "Samuel is clarifying your intention...", $conversationId))->toOthers();
+        try {
+            broadcast(new MessageStatusUpdated($user ? $user->id : null, "Samuel is clarifying your intention...", $conversationId))->toOthers();
+        } catch (\Exception $e) {
+            Log::warning("Broadcasting MessageStatusUpdated failed: " . $e->getMessage());
+        }
 
         Log::info("Starting intent classification for message: " . Str::limit($userMessage, 50));
         $intent = $intentService->classify($userMessage);
@@ -145,11 +149,23 @@ class ChatController extends Controller
                 $systemPrompt .= "\nHANDLING VIDEO REQUEST: At this time, you CANNOT generate videos. Explain this gently to the user, mentioning it might be a future feature as you are still growing. Always offer an encouraging scripture.\n";
             } elseif ($intent === 'factual') {
                 $systemPrompt .= "\nHANDLING FACTUAL QUERY: The user is asking for a specific biblical fact. Keep your reply straightforward, factual, and include a scriptural reference. If the fact is NOT in the Bible (e.g., electricity), explain that you only refer to the Bible and specify the version being used.\n";
-                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Fetching scriptural answer and reference...", $conversationId))->toOthers();
+                try {
+                    broadcast(new MessageStatusUpdated($user ? $user->id : null, "Fetching scriptural answer and reference...", $conversationId))->toOthers();
+                } catch (\Exception $e) {
+                    Log::warning("Broadcasting MessageStatusUpdated for factual query failed: " . $e->getMessage());
+                }
             } elseif ($intent === 'image') {
-                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Generating spiritual image, may take a while longer...", $conversationId))->toOthers();
+                try {
+                    broadcast(new MessageStatusUpdated($user ? $user->id : null, "Generating spiritual image, may take a while longer...", $conversationId))->toOthers();
+                } catch (\Exception $e) {
+                    Log::warning("Broadcasting MessageStatusUpdated for image query failed: " . $e->getMessage());
+                }
             } else {
-                broadcast(new MessageStatusUpdated($user ? $user->id : null, "Seeking guidance in the Word...", $conversationId))->toOthers();
+                try {
+                    broadcast(new MessageStatusUpdated($user ? $user->id : null, "Seeking guidance in the Word...", $conversationId))->toOthers();
+                } catch (\Exception $e) {
+                    Log::warning("Broadcasting MessageStatusUpdated for default query failed: " . $e->getMessage());
+                }
             }
 
             if ($mode === 'fast') {
